@@ -89,8 +89,8 @@ for i in range(1, len(odom)):
 
 dead_reckoning = [odom[0]]
 for i in range(1, len(odom)):
-    ua = control[i, 0] + np.random.randn() * (Q[0] ** 0.5)
-    ub = control[i, 1] + np.random.randn() * (Q[1] ** 0.5)
+    ua = control[i, 0]# + np.random.randn() * (Q[0] ** 0.5)
+    ub = control[i, 1]# + np.random.randn() * (Q[1] ** 0.5)
 
     angle = wrap_angle(dead_reckoning[-1][2] + ua)
 
@@ -105,12 +105,12 @@ dead_reckoning = np.array(dead_reckoning)
 
 fig, ax = plt.subplots()
 
-ax.scatter(odom[:, 0], odom[:, 1])
-ax.scatter(dead_reckoning[:, 0], dead_reckoning[:, 1])
+ax.scatter(odom[:, 0], odom[:, 1], s=2)
+ax.scatter(dead_reckoning[:, 0], dead_reckoning[:, 1], s=2)
 
-np.save("odom.npy", odom)
-np.save("control.npy", control)
-np.save("dead_reckoning.npy", dead_reckoning)
+# np.save("odom.npy", odom)
+# np.save("control.npy", control)
+# np.save("dead_reckoning.npy", dead_reckoning)
 
 
 plt.show()

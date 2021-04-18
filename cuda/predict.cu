@@ -93,7 +93,7 @@ __global__ void predict_from_fsonline_model(double *particles, double ua, double
     // though in our case mu=0.
     particle[2] += (ua * dt);
     // particle[2] = fmod(particle[2], (double)(2*M_PI));
-    particle[2] = fmod(particle[2] + M_PI, (double)(2*M_PI)) - M_PI;
+    particle[2] = fmod(particle[2], (double)(2*M_PI));
     // particle[2] = atan2(sin(particle[2]), cos(particle[2]));
 
     double dist = (ub * dt);
@@ -101,7 +101,7 @@ __global__ void predict_from_fsonline_model(double *particles, double ua, double
     particle[1] += sin(particle[2]) * dist;
 
     particle[2] += (uc * dt);
-    particle[2] = fmod(particle[2] + M_PI, (double)(2*M_PI)) - M_PI;
+    particle[2] = fmod(particle[2], (double)(2*M_PI));
 }
 
 

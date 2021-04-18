@@ -5,7 +5,7 @@ from numpy.testing._private.utils import measure
 import scipy
 import scipy.stats
 import matplotlib.pyplot as plt
-
+import json
 from plotting import (
     plot_connections, plot_history, plot_landmarks, plot_measurement,
     plot_particles_weight, plot_particles_grey, plot_confidence_ellipse,
@@ -20,6 +20,7 @@ from pycuda.driver import limit
 from sensor import Sensor
 from stats import Stats
 from common import CUDAMemory, resample, rescale, get_pose_estimate
+from cuda.update_jacobian_dist import load_cuda_modules
 
 def wrap_angle(angle):
     return np.arctan2(np.sin(angle), np.cos(angle))
@@ -85,11 +86,15 @@ def run_SLAM(config, plot=False, seed=None):
         ax[0].axis('scaled')
         ax[1].axis('scaled')
 
-    cuda_modules = config.modules
+    cuda_modules = load_cuda_modules(
+        THREADS=config.THREADS,
+        PARTICLE_SIZE=config.PARTICLE_SIZE,
+        N_PARTICLES=config.N
+    )
 
     sensor = Sensor(
         config.LANDMARKS, [],
-        config.sensor.VARIANCE * 5, config.sensor.RANGE,
+        config.sensor.VARIANCE, config.sensor.RANGE,
         config.sensor.FOV, config.sensor.MISS_PROB, 0, rb=True
     )
 
@@ -100,7 +105,7 @@ def run_SLAM(config, plot=False, seed=None):
     cuda.memcpy_htod(memory.particles, particles)
 
     cuda_modules["predict"].get_function("init_rng")(
-        np.int32(config.SEED), block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
+        np.int32(seed), block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
     )
 
 
@@ -186,13 +191,29 @@ def run_SLAM(config, plot=False, seed=None):
 
         cuda.memcpy_htod(memory.measurements, visible_measurements)
 
-        cuda_modules["predict"].get_function("predict_from_fsonline_model")(
-            memory.particles,
-            np.float64(config.CONTROL[i, 0]), np.float64(config.CONTROL[i, 1]), np.float64(config.CONTROL[i, 2]),
-            np.float64(config.CONTROL_VARIANCE[0] ** 0.5), np.float64(config.CONTROL_VARIANCE[1] ** 0.5),
-            np.float64(config.DT),
-            block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
-        )
+        if "gps" in config and i % config.gps.RATE == 0:
+            cuda_modules["predict"].get_function("predict_from_imu")(
+                memory.particles,
+                np.float64(pose[0]), np.float64(pose[1]), np.float64(pose[2]),
+                np.float64(config.gps.VARIANCE[0] ** 0.5), np.float64(config.gps.VARIANCE[1] ** 0.5), np.float64(config.gps.VARIANCE[2] ** 0.5),
+                block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
+            )
+        else:
+            cuda_modules["predict"].get_function("predict_from_fsonline_model")(
+                memory.particles,
+                np.float64(config.CONTROL[i, 0]), np.float64(config.CONTROL[i, 1]), np.float64(config.CONTROL[i, 2]),
+                np.float64(config.CONTROL_VARIANCE[0] ** 0.5), np.float64(config.CONTROL_VARIANCE[1] ** 0.5),
+                np.float64(config.DT),
+                block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
+            )
+
+        # cuda_modules["predict"].get_function("predict_from_fsonline_model")(
+        #     memory.particles,
+        #     np.float64(config.CONTROL[i, 0]), np.float64(config.CONTROL[i, 1]), np.float64(config.CONTROL[i, 2]),
+        #     np.float64(config.CONTROL_VARIANCE[0] ** 0.5), np.float64(config.CONTROL_VARIANCE[1] ** 0.5),
+        #     np.float64(config.DT),
+        #     block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
+        # )
 
 
         # if plot:
@@ -312,18 +333,31 @@ def run_SLAM(config, plot=False, seed=None):
 
 
     if not plot:
+        output = {
+            "ground": [list(p) for p in stats.ground_truth_path],
+            "predicted": [list(p) for p in stats.predicted_path],
+            "landmarks": config.LANDMARKS.tolist(),
+            "map": [list(lm) for lm in best_landmarks],
+            "map_covariance": [cov.tolist() for cov in best_covariances]
+        }
+
+        fname = f"figs_fsonline/gps_data_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
+
+        with open(fname, "w") as f:
+            json.dump(output, f)
+
         fig, ax = plt.subplots(figsize=(15, 10))
         plot_history(ax, stats.ground_truth_path, color='green', markersize=1, linewidth=1, style="-", label="Ground truth")
         plot_history(ax, stats.predicted_path, color='orange', markersize=1, linewidth=1, style="-", label="SLAM estimate")
-        plot_history(ax, dead_reckoning, color='purple', markersize=1, linewidth=1, style="-", label="Dead reckoning")
+        # plot_history(ax, dead_reckoning, color='purple', markersize=1, linewidth=1, style="-", label="Dead reckoning")
         plot_landmarks(ax, config.LANDMARKS, color="blue")
         plot_map(ax, best_landmarks, color="orange", marker="o")
         for i, landmark in enumerate(best_landmarks):
             plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
 
         plt.legend()
-        plt.savefig(f"figs_fsonline/{seed}.png")
-        print(f"figs_fsonline/{seed}.png")
+        fname = f"figs_fsonline/gps_data_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
+        plt.savefig(fname)
 
     stats.summary()
     return stats.mean_path_deviation()
@@ -332,4 +366,4 @@ def run_SLAM(config, plot=False, seed=None):
 if __name__ == "__main__":
     from config_jacobian_fsonline import config
     context.set_limit(limit.MALLOC_HEAP_SIZE, config.GPU_HEAP_SIZE_BYTES)
-    run_SLAM(config, plot=False)
+    run_SLAM(config, plot=True)

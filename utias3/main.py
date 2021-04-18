@@ -12,10 +12,10 @@ def filter_measurements(measurements, barcodes):
     return measurements
 
 
-# barcodes = genfromtxt("barcodes.csv", delimiter=",")
-# landmarks = genfromtxt("landmarks.csv", delimiter=",")
-# np.save("barcodes.npy", barcodes)
-# np.save("landmarks.npy", landmarks)
+barcodes = genfromtxt("barcodes.csv", delimiter=",")
+landmarks = genfromtxt("landmarks.csv", delimiter=",")
+np.save("barcodes.npy", barcodes)
+np.save("landmarks.npy", landmarks)
 
 barcodes = np.load("barcodes.npy")
 landmarks = np.load("landmarks.npy")

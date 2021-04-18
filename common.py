@@ -29,6 +29,22 @@ class CUDAMemory:
         self.d = cuda.mem_alloc(DOUBLE * config.N)
 
 
+    def free(self):
+        self.particles.free()
+        self.scratchpad.free()
+        self.measurements.free()
+        self.weights.free()
+        self.ancestors.free()
+        self.ancestors_aux.free()
+        self.rescale_sum.free()
+        self.cov.free()
+        self.mean_position.free()
+        self.cumsum.free()
+        self.c.free()
+        self.d.free()
+
+
+
 def get_pose_estimate(modules, config, memory: CUDAMemory):
     estimate = np.zeros(3, dtype=np.float64)
 

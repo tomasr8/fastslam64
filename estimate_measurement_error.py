@@ -9,7 +9,7 @@ def pi_2_pi(angle):
     return (angle + math.pi) % (2 * math.pi) - math.pi
 
 T = 1000.0
-ROBOT = 1
+ROBOT = 4
 FOLDER = "utias32"
 
 barcodes = np.load(f"{FOLDER}/barcodes.npy")
