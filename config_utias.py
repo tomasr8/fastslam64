@@ -2,7 +2,7 @@ import numpy as np
 from utils import dotify
 
 START = 0
-T = 650
+T = 1000
 robot = 1
 dataset = 3
 
