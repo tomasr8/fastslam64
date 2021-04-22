@@ -28,7 +28,7 @@ def wrap_angle(angle):
 def min_dist(arr, stamp):
     arr = np.abs(arr - stamp)
 
-    print(f"Min: {np.min(arr)}")
+    # print(f"Min: {np.min(arr)}")
 
     argmin = np.argmin(arr)
     if arr[argmin] < 30:
@@ -101,7 +101,7 @@ def run_SLAM(config, plot=False, seed=None):
     memory = CUDAMemory(config)
     weights = np.zeros(config.N, dtype=np.float64)
 
-    cuda.memcpy_htod(memory.cov, config.sensor.COVARIANCE)
+    cuda.memcpy_htod(memory.cov, 8 * config.sensor.COVARIANCE)
     cuda.memcpy_htod(memory.particles, particles)
 
     cuda_modules["predict"].get_function("init_rng")(
@@ -189,6 +189,12 @@ def run_SLAM(config, plot=False, seed=None):
 
         stats.stop_measuring("Measurement")
 
+        # ===== RESET WEIGHTS =======
+        cuda_modules["resample"].get_function("reset_weights")(
+            memory.particles,
+            block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
+        )
+
         cuda.memcpy_htod(memory.measurements, visible_measurements)
 
         if "gps" in config and i % config.gps.RATE == 0:
@@ -260,7 +266,7 @@ def run_SLAM(config, plot=False, seed=None):
         # print(f"Particle xs: {FlatParticle.x(particles)}")
         # print(f"Particle ys: {FlatParticle.y(particles)}")
 
-        print(f"Estimate: {estimate}, Groud: {pose}")
+        # print(f"Estimate: {estimate}, Groud: {pose}")
 
         stats.add_pose([pose[0], pose[1], pose[2]], estimate)
 
@@ -341,7 +347,7 @@ def run_SLAM(config, plot=False, seed=None):
             "map_covariance": [cov.tolist() for cov in best_covariances]
         }
 
-        fname = f"figs_fsonline/gps_data_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
+        fname = f"figs_fsonline/1_gps_data_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
 
         with open(fname, "w") as f:
             json.dump(output, f)
@@ -356,7 +362,7 @@ def run_SLAM(config, plot=False, seed=None):
             plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
 
         plt.legend()
-        fname = f"figs_fsonline/gps_data_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
+        fname = f"figs_fsonline/1_gps_plot_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
         plt.savefig(fname)
 
     stats.summary()

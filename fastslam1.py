@@ -7,39 +7,42 @@ author: Atsushi Sakai (@Atsushi_twi)
 """
 
 import math
-
+import time as tm
 import matplotlib.pyplot as plt
 import numpy as np
+import json
 
 np.random.seed(0)
 
 # Fast SLAM covariance
-Q = np.diag([3.0, np.deg2rad(10.0)]) ** 2
-R = np.diag([1.0, np.deg2rad(20.0)]) ** 2
+Q = 8 * (np.diag([0.15, np.deg2rad(1.0)]) ** 2)
+R = np.diag([0.15, np.deg2rad(5.0)]) ** 2
 
 #  Simulation parameter
-Q_sim = np.diag([0.3, np.deg2rad(2.0)]) ** 2
-R_sim = np.diag([0.5, np.deg2rad(10.0)]) ** 2
+Q_sim = np.diag([0.15, np.deg2rad(1.0)]) ** 2
+R_sim = np.diag([0.15, np.deg2rad(5)]) ** 2
 OFFSET_YAW_RATE_NOISE = 0.00
 
-DT = 0.05 # time tick [s]
-SIM_TIME = 50.0  # simulation time [s]
-MAX_RANGE = 5.0  # maximum observation range
+CONTROL = np.load("circle/control.npy")
+
+DT = 1.0 # time tick [s]
+SIM_TIME = len(CONTROL) - 1  # simulation time [s]
+MAX_RANGE = 4.0  # maximum observation range
 M_DIST_TH = 2.0  # Threshold of Mahalanobis distance for data association.
 STATE_SIZE = 3  # State size [x,y,yaw]
 LM_SIZE = 2  # LM state size [x,y]
-N_PARTICLE = 50  # number of particle
+N_PARTICLE = 128  # number of particle
 NTH = N_PARTICLE / 1.5  # Number of particle for re-sampling
 
-show_animation = True
+show_animation = False
 
 
 class Particle:
 
     def __init__(self, n_landmark):
         self.w = 1.0 / N_PARTICLE
-        self.x = 1.0
-        self.y = 1.0
+        self.x = 2.0
+        self.y = 6.0
         self.yaw = 0.0
         # landmark x-y positions
         self.lm = np.zeros((n_landmark, LM_SIZE))
@@ -342,18 +345,18 @@ def main():
     #                  [-10.0, 15.0]
     #                  ])
 
-    RFID = np.loadtxt("landmarks_square.txt")                 
+    RFID = np.load("circle/landmarks.npy")                 
     n_landmark = RFID.shape[0]
-    CONTROL = np.load("square/control.npy")
+    # CONTROL = np.load("square/control.npy")
 
     # State Vector [x y yaw v]'
     # xEst = np.zeros((STATE_SIZE, 1))  # SLAM estimation
     # xTrue = np.zeros((STATE_SIZE, 1))  # True state
     # xDR = np.zeros((STATE_SIZE, 1))  # Dead reckoning
 
-    xEst = np.array([1.0, 1, 0]).reshape(3, 1)  # SLAM estimation
-    xTrue = np.array([1.0, 1, 0]).reshape(3, 1)  # True state
-    xDR = np.array([1.0, 1, 0]).reshape(3, 1)  # Dead reckoning
+    xEst = np.array([2.0, 6, 0]).reshape(3, 1)  # SLAM estimation
+    xTrue = np.array([2.0, 6, 0]).reshape(3, 1)  # True state
+    xDR = np.array([2.0, 6, 0]).reshape(3, 1)  # Dead reckoning
 
     # history
     hxEst = xEst
@@ -362,15 +365,18 @@ def main():
 
     particles = [Particle(n_landmark) for _ in range(N_PARTICLE)]
 
-    i = 0
+    times = []
+
+    ii = 0
     while SIM_TIME >= time:
+        start_time = tm.time()
         time += DT
-        print(time)
+        # print(time)
         # u = calc_input(time)
         # u = np.array([1.0, 0]).reshape(2, 1)
-        u = (1/DT) * CONTROL[i, [1, 0]].reshape((2, 1))
+        u = (1/DT) * CONTROL[ii, [1, 0]].reshape((2, 1))
         # print(u)
-        i += 1
+        ii += 1
 
         xTrue, z, xDR, ud = observation(xTrue, xDR, u, RFID)
 
@@ -405,10 +411,66 @@ def main():
             plt.grid(True)
             plt.pause(0.001)
 
+        # if ii == 2000:
+        #     plt.plot(RFID[:, 0], RFID[:, 1], "*k")
+
+        #     for i in range(N_PARTICLE):
+        #         plt.plot(particles[i].x, particles[i].y, ".r")
+        #         plt.plot(particles[i].lm[:, 0], particles[i].lm[:, 1], "xb")
+
+        #     plt.plot(hxTrue[0, :], hxTrue[1, :], "-b")
+        #     plt.plot(hxEst[0, :], hxEst[1, :], "-r")
+        #     plt.plot(xEst[0], xEst[1], "xk")
+        #     plt.axis("equal")
+        #     plt.grid(True)
+
+        #     plt.savefig("fastslam1.png")
+        #     break
+
         # plt.plot(hxTrue[0, :], hxTrue[1, :], "-b")
         # plt.plot(hxDR[0, :], hxDR[1, :], "-k")
         # plt.plot(hxEst[0, :], hxEst[1, :], "-r")
 
+        times.append(tm.time() -  start_time)
+
+    print(1/np.mean(times), 1000 * np.std(times))
+    return hxTrue, hxEst
+
+
+def mse(ground, predicted):
+    ground = ground.T
+    predicted = predicted.T
+
+    mse_trans = 0
+    mse_rot = 0
+
+    for g, p in zip(ground, predicted):
+        mse_trans += (g[0]-p[0])**2 + (g[1]-p[1])**2
+        mse_rot += (g[2]-p[2])**2
+
+    N = len(ground)
+
+    return mse_trans/N, mse_rot/N
+
 
 if __name__ == '__main__':
-    main()
+    mse_trans = []
+    mse_rot = []
+
+    for i in range(20):
+        print(i)
+
+        hxTrue, hxEst = main()
+        with open(f"figs_pr/1_data_{N_PARTICLE}_{i}.json", "w") as f:
+            data = {
+                "ground": hxTrue.T.tolist(),
+                "predicted": hxEst.T.tolist(),
+            }
+            json.dump(data, f)
+
+        t, r = mse(hxTrue, hxEst)
+        mse_trans.append(t)
+        mse_rot.append(r)
+
+    print(np.mean(mse_trans), np.std(mse_trans))
+    print(np.mean(mse_rot), np.std(mse_rot))

@@ -14,24 +14,26 @@ import numpy as np
 np.random.seed(0)
 
 # Fast SLAM covariance
-Q = np.diag([3.0, np.deg2rad(10.0)]) ** 2
-R = np.diag([1.0, np.deg2rad(20.0)]) ** 2
+Q = np.diag([0.15, np.deg2rad(1.0)]) ** 2
+R = np.diag([0.05, np.deg2rad(0.5)]) ** 2
 
 #  Simulation parameter
-Q_sim = np.diag([0.3, np.deg2rad(2.0)]) ** 2
-R_sim = np.diag([0.5, np.deg2rad(10.0)]) ** 2
+Q_sim = np.diag([0.15, np.deg2rad(1.0)]) ** 2
+R_sim = np.diag([0.05, np.deg2rad(0.5)]) ** 2
 OFFSET_YAW_RATE_NOISE = 0.00
 
-DT = 0.05  # time tick [s]
-SIM_TIME = 50.0  # simulation time [s]
+CONTROL = np.load("square/control.npy")
+
+DT = 1.0  # time tick [s]
+SIM_TIME = len(CONTROL)  # simulation time [s]
 MAX_RANGE = 5.0  # maximum observation range
 M_DIST_TH = 2.0  # Threshold of Mahalanobis distance for data association.
 STATE_SIZE = 3  # State size [x,y,yaw]
 LM_SIZE = 2  # LM state size [x,y]
-N_PARTICLE = 50  # number of particle
+N_PARTICLE = 64  # number of particle
 NTH = N_PARTICLE / 1.5  # Number of particle for re-sampling
 
-show_animation = True
+show_animation = False
 
 
 class Particle:
@@ -368,7 +370,7 @@ def main():
     #                  ])
     RFID = np.loadtxt("landmarks_square.txt")
     n_landmark = RFID.shape[0]
-    CONTROL = np.load("square/control.npy")
+    # CONTROL = np.load("square/control.npy")
 
     # State Vector [x y yaw v]'
     # xEst = np.zeros((STATE_SIZE, 1))  # SLAM estimation
@@ -386,14 +388,14 @@ def main():
 
     particles = [Particle(n_landmark) for _ in range(N_PARTICLE)]
 
-    i = 0
+    ii = 0
     while SIM_TIME >= time:
         time += DT
         print(time)
         # u = calc_input(time)
         # u = np.array([1.0, 0]).reshape(2, 1)
-        u = (1/DT) * CONTROL[i, [1, 0]].reshape((2, 1))
-        i += 1
+        u = (1/DT) * CONTROL[ii, [1, 0]].reshape((2, 1))
+        ii += 1
 
         xTrue, z, xDR, ud = observation(xTrue, xDR, u, RFID)
 
@@ -432,6 +434,22 @@ def main():
             plt.axis("equal")
             plt.grid(True)
             plt.pause(0.001)
+
+        if ii == 2000:
+            plt.plot(RFID[:, 0], RFID[:, 1], "*k")
+
+            for i in range(N_PARTICLE):
+                plt.plot(particles[i].x, particles[i].y, ".r")
+                plt.plot(particles[i].lm[:, 0], particles[i].lm[:, 1], "xb")
+
+            plt.plot(hxTrue[0, :], hxTrue[1, :], "-b")
+            plt.plot(hxEst[0, :], hxEst[1, :], "-r")
+            plt.plot(xEst[0], xEst[1], "xk")
+            plt.axis("equal")
+            plt.grid(True)
+
+            plt.savefig("fastslam2.png")
+            break
 
 
 if __name__ == '__main__':

@@ -208,7 +208,7 @@ __device__ void add_measurements_as_landmarks(double *particle, landmark_measure
 }
 
 
-__device__ void update_landmarks(int id, double *particle, landmark_measurements *measurements, int *in_range, int *n_matches, double range, double fov, double thresh)
+__device__ void update_landmarks(int p_id, double *particle, landmark_measurements *measurements, int *in_range, int *n_matches, double range, double fov, double thresh)
 {
     double *measurement_cov = measurements->measurement_cov;
     int n_measurements = measurements->n_measurements;

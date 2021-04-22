@@ -20,7 +20,10 @@ if EXPORT:
     })
 
 
-with open("figs_utias/histogram_3_1.json") as f:
+# with open("figs_utias/histogram_3_1.json") as f:
+#     histogram = json.load(f)
+
+with open("figs_utias/2_histogram.json") as f:
     histogram = json.load(f)
 
 fig, ax = plt.subplots()
@@ -29,12 +32,13 @@ fig.set_size_inches(w=5.02, h=5.02)
 fig.subplots_adjust(left=0.01, right=0.99, bottom=0.08, top=0.99)
 
 ground = np.array(histogram["ground"])
-measurements = np.array(histogram["measurements"])
-landmarks = np.array(histogram["landmarks"])
+# measurements = np.array(histogram["measurements"])
+# landmarks = np.array(histogram["landmarks"])
 
-plot_history(ax, ground[::50], color='green', linewidth=1, label="Robot path")
-plot_landmarks(ax, landmarks, color="blue", zorder=104, label="Landmarks")
-plot_measurement(ax, [0, 0], measurements, color="orange", zorder=103, size=3, label="Measurements")
+plot_history(ax, ground[:5000:50], color='green', linewidth=1, label="Robot path")
+plot_history(ax, ground[-1000::50], color='orange', linewidth=1, label="Robot path")
+# plot_landmarks(ax, landmarks, color="blue", zorder=104, label="Landmarks")
+# plot_measurement(ax, [0, 0], measurements, color="orange", zorder=103, size=3, label="Measurements")
 
 plt.xticks([])
 plt.yticks([])

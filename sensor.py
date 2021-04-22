@@ -4,8 +4,8 @@ def wrap_angle(angle):
     return np.arctan2(np.sin(angle), np.cos(angle))
 
 class Sensor(object):
-    def __init__(self, landmarks, phantom_landmarks, measurement_variance, range, fov, miss_prob, phantom_prob, rb=False):
-        self.landmarks = landmarks
+    def __init__(self, landmarks, phantom_landmarks, measurement_variance, range, fov, miss_prob, phantom_prob, rb=False, with_id=False):
+        self.landmarks = landmarks.copy()
         self.phantom_landmarks = phantom_landmarks
         self.measurement_variance = measurement_variance
         self.range = range
@@ -13,6 +13,7 @@ class Sensor(object):
         self.miss_prob = miss_prob
         self.phantom_prob = phantom_prob
         self.rb = rb
+        self.with_id = with_id
 
 
     def __get_noisy_measurement(self, position, landmark):
@@ -41,8 +42,12 @@ class Sensor(object):
 
 
     def get_noisy_measurements(self, pose):
+        d = 2
+        if self.with_id:
+            d = 3
+
         measurements = {
-            "observed": np.zeros((0, 2), dtype=np.float64),
+            "observed": np.zeros((0, d), dtype=np.float64),
             "missed": np.zeros((0, 2), dtype=np.float64),
             "outOfRange": np.zeros((0, 2), dtype=np.float64),
         }
@@ -54,6 +59,9 @@ class Sensor(object):
                 z = self.__get_noisy_rb_measurement(pose, landmark)
             else:
                 z = self.__get_noisy_measurement(position, landmark)
+
+            if self.with_id:
+                z.append(i)
 
             coin_toss = np.random.uniform(0, 1)
             if self.__in_sensor_range(landmark, pose):

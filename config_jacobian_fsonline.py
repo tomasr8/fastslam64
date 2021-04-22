@@ -21,19 +21,19 @@ config = {
     "sensor": {
         "RANGE": 30,
         "FOV": np.pi,
-        "VARIANCE": [0.35 ** 2, np.deg2rad(3.0) ** 2],
+        "VARIANCE": [0.25 ** 2, np.deg2rad(3.0) ** 2],
         "MAX_MEASUREMENTS": 100, # upper bound on the total number of simultaneous measurements
         "MEASUREMENTS": measurements,
         "MISS_PROB": 0
     },
     "gps": {
-        "VARIANCE": [0.3 ** 2, 0.3 ** 2, np.deg2rad(2.0) ** 2],
+        "VARIANCE": [0.5 ** 2, 0.5 ** 2, np.deg2rad(4.0) ** 2],
         "RATE": 10
     },
     "ODOMETRY": odometry[N:],
     "ODOMETRY_VARIANCE": [0.1, 0.1, 0.001],
     "CONTROL": control[N:],
-    "CONTROL_VARIANCE": [np.deg2rad(1) ** 2, 0.15 ** 2],
+    "CONTROL_VARIANCE": [np.deg2rad(1.0) ** 2, 0.15 ** 2],
     # "CONTROL_VARIANCE": [np.deg2rad(0.25) ** 2, 0.05 ** 2],
 
     "LANDMARKS": np.load("fsonline/track.npy").astype(np.float64), # landmark positions

@@ -225,7 +225,7 @@ def run_SLAM(config, plot=False, seed=None):
             "map_covariance": [cov.tolist() for cov in best_covariances]
         }
 
-        fname = f"figs_utias/1_data_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
+        fname = f"figs_utias/2_data_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
 
         with open(fname, "w") as f:
             json.dump(output, f)
@@ -239,7 +239,7 @@ def run_SLAM(config, plot=False, seed=None):
         for i, landmark in enumerate(best_landmarks):
             plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
 
-        fname = f"figs_utias/1_plot_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
+        fname = f"figs_utias/2_plot_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
         plt.savefig(fname)
 
     memory.free()

@@ -321,12 +321,12 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
     for(int i = 0; i < n_landmarks; i++) {
         n_matches[i] = 0;
         double *mean = get_mean(particle, i);
-        in_range[n_in_range] = i;
-        n_in_range++;
-        // if(in_sensor_range(particle, mean, range, fov)) {
-        //     in_range[n_in_range] = i;
-        //     n_in_range++;
-        // }
+        // in_range[n_in_range] = i;
+        // n_in_range++;
+        if(in_sensor_range(particle, mean, range, fov)) {
+            in_range[n_in_range] = i;
+            n_in_range++;
+        }
     }
 
     // printf("START n_in_range(%d), n_landmarks(%d)\n", n_in_range, n_landmarks);

@@ -57,7 +57,7 @@ if EXPORT:
     })
 
 
-with open("figs_utias/data_3_1_64_2.json") as f:
+with open("figs_jacobi_dist/3_data_1024_0.8_0.02-0.0003_0.0076-0.02_16.json") as f:
     data = json.load(f)
 
 fig, ax = plt.subplots()
@@ -67,7 +67,7 @@ fig.subplots_adjust(left=0.01, right=0.99, bottom=0.12, top=0.99)
 
 ground = np.array(data["ground"])
 predicted = np.array(data["predicted"])
-dr = np.array(data["dead_reckoning"])
+# dr = np.array(data["dead_reckoning"])
 landmarks = np.array(data["landmarks"])
 estimated_landmarks = np.array(data["map"])
 covariance = np.array(data["map_covariance"])
@@ -76,9 +76,9 @@ covariance = np.array(data["map_covariance"])
 # plot_history(ax, dr[::50], color='purple', linewidth=1, style="--", label="Dead reckoning")
 # plot_landmarks(ax, landmarks, color="blue", zorder=104, label="Landmarks")
 
-plot_history(ax, ground[::50], color='green', linewidth=1, label="True path")
-plot_history(ax, predicted[::50], color='orange', linewidth=1, label="Estimated path")
-plot_landmarks(ax, landmarks, color="blue", zorder=104, label="True landmarks")
+plot_history(ax, ground, color='green', linewidth=1, label="Robot path")
+plot_history(ax, predicted, color='orange', linewidth=1, label="Estimated path")
+plot_landmarks(ax, landmarks, color="blue", zorder=104, label="Landmarks")
 plot_landmarks(ax, estimated_landmarks, color="orange", zorder=104, label="Estimated landmarks")
 
 # for i, landmark in enumerate(estimated_landmarks):
@@ -97,6 +97,6 @@ print(relative_error(ground, predicted))
 
 
 if EXPORT:
-    plt.savefig('slam.pgf')
+    plt.savefig('sim_vis_est.pgf')
 else:
     plt.show()

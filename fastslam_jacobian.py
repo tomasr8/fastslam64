@@ -70,6 +70,9 @@ def run_SLAM(config, plot=False, seed=None):
         stats.start_measuring("Loop")
         print(i)
 
+        # if i == 200:
+        #     break
+
         stats.start_measuring("Measurement")
         # pose = config.GROUND_TRUTH[i]
 
@@ -94,6 +97,7 @@ def run_SLAM(config, plot=False, seed=None):
         missed_landmarks = measurements["missed"]
         out_of_range_landmarks = measurements["outOfRange"]
 
+        print(len(visible_measurements))
         stats.stop_measuring("Measurement")
 
 
@@ -161,7 +165,7 @@ def run_SLAM(config, plot=False, seed=None):
             plot_landmarks(ax[0], config.LANDMARKS, color="blue", zorder=100)
             plot_landmarks(ax[0], out_of_range_landmarks, color="black", zorder=101)
             plot_history(ax[0], stats.ground_truth_path, color='green')
-            # plot_history(ax[0], stats.predicted_path, color='orange')
+            plot_history(ax[0], stats.predicted_path, color='orange')
             # plot_history(ax[0], config.DEAD_RECKONING[:(i+1)], color='purple')
             # plot_history(ax[0], dead_reckoning, color='purple')
 
@@ -183,11 +187,11 @@ def run_SLAM(config, plot=False, seed=None):
             plt.pause(0.001)
 
 
-        if i == config.CONTROL.shape[0]-1:
-            cuda.memcpy_dtoh(particles, memory.particles)
-            best = np.argmax(FlatParticle.w(particles))
-            best_covariances = FlatParticle.get_covariances(particles, best)
-            best_landmarks = FlatParticle.get_landmarks(particles, best)
+        # if i == config.CONTROL.shape[0]-1:
+        #     cuda.memcpy_dtoh(particles, memory.particles)
+        #     best = np.argmax(FlatParticle.w(particles))
+        #     best_covariances = FlatParticle.get_covariances(particles, best)
+        #     best_landmarks = FlatParticle.get_landmarks(particles, best)
 
 
         cuda_modules["weights_and_mean"].get_function("get_weights")(
@@ -209,42 +213,32 @@ def run_SLAM(config, plot=False, seed=None):
         stats.stop_measuring("Loop")
 
 
-    if not plot:
-        # fig, ax = plt.subplots()
-        # plot_history(ax, stats.ground_truth_path, color='green')
-        # plot_history(ax, stats.predicted_path, color='orange')
-        # plot_landmarks(ax, config.LANDMARKS, color="blue")
-        # plot_map(ax, best_landmarks, color="orange", marker="o")
-        # for i, landmark in enumerate(best_landmarks):
-        #     plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
+    # if not plot:
+    #     output = {
+    #         "ground": [list(p) for p in stats.ground_truth_path],
+    #         "predicted": [list(p) for p in stats.predicted_path],
+    #         "landmarks": config.LANDMARKS.tolist(),
+    #         "map": [list(lm) for lm in best_landmarks],
+    #         "map_covariance": [cov.tolist() for cov in best_covariances]
+    #     }
 
-        # plt.savefig(f"figs_jacobi_dist/{seed}.png")
+    #     fname = f"figs_jacobi_dist/3_data_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
 
-        output = {
-            "ground": [list(p) for p in stats.ground_truth_path],
-            "predicted": [list(p) for p in stats.predicted_path],
-            "landmarks": config.LANDMARKS.tolist(),
-            "map": [list(lm) for lm in best_landmarks],
-            "map_covariance": [cov.tolist() for cov in best_covariances]
-        }
+    #     with open(fname, "w") as f:
+    #         json.dump(output, f)
 
-        fname = f"figs_jacobi_dist/2_data_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
+    #     fig, ax = plt.subplots(figsize=(15, 10))
+    #     plot_history(ax, stats.ground_truth_path, color='green', markersize=1, linewidth=1, style="-", label="Ground truth")
+    #     plot_history(ax, stats.predicted_path, color='orange', markersize=1, linewidth=1, style="-", label="SLAM estimate")
+    #     # plot_history(ax, dead_reckoning, color='purple', markersize=1, linewidth=1, style="-", label="Dead reckoning")
+    #     plot_landmarks(ax, config.LANDMARKS, color="blue")
+    #     plot_map(ax, best_landmarks, color="orange", marker="o")
+    #     for i, landmark in enumerate(best_landmarks):
+    #         plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
 
-        with open(fname, "w") as f:
-            json.dump(output, f)
-
-        fig, ax = plt.subplots(figsize=(15, 10))
-        plot_history(ax, stats.ground_truth_path, color='green', markersize=1, linewidth=1, style="-", label="Ground truth")
-        plot_history(ax, stats.predicted_path, color='orange', markersize=1, linewidth=1, style="-", label="SLAM estimate")
-        # plot_history(ax, dead_reckoning, color='purple', markersize=1, linewidth=1, style="-", label="Dead reckoning")
-        plot_landmarks(ax, config.LANDMARKS, color="blue")
-        plot_map(ax, best_landmarks, color="orange", marker="o")
-        for i, landmark in enumerate(best_landmarks):
-            plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
-
-        plt.legend()
-        fname = f"figs_jacobi_dist/2_plot_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
-        plt.savefig(fname)
+    #     plt.legend()
+    #     fname = f"figs_jacobi_dist/3_plot_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
+    #     plt.savefig(fname)
 
 
 
@@ -254,8 +248,9 @@ def run_SLAM(config, plot=False, seed=None):
 
 
 if __name__ == "__main__":
-    # from config_jacobian import config
-    from config_jacobian_square import config
+    # from config_jacobian_circle import config
+    from config_perf import config
+
     context.set_limit(limit.MALLOC_HEAP_SIZE, config.GPU_HEAP_SIZE_BYTES)
 
     run_SLAM(config, plot=False)

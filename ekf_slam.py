@@ -9,17 +9,21 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
+np.random.seed(0)
+
 # EKF state covariance
-Cx = np.diag([0.5, 0.5, np.deg2rad(30.0)]) ** 2
+Cx = np.diag([0.2, 0.2, np.deg2rad(5.0)]) ** 2
 
 #  Simulation parameter
-Q_sim = np.diag([0.2, np.deg2rad(1.0)]) ** 2
-R_sim = np.diag([1.0, np.deg2rad(10.0)]) ** 2
+Q_sim = np.diag([0.15, np.deg2rad(1.0)]) ** 2
+R_sim = np.diag([0.05, np.deg2rad(0.5)]) ** 2
 
-DT = 0.1  # time tick [s]
-SIM_TIME = 50.0  # simulation time [s]
+
+CONTROL = np.load("square/control.npy")
+DT = 1.0  # time tick [s]
+SIM_TIME = len(CONTROL)  # simulation time [s]
 MAX_RANGE = 5.0  # maximum observation range
-M_DIST_TH = 2.0  # Threshold of Mahalanobis distance for data association.
+M_DIST_TH = 3.8  # Threshold of Mahalanobis distance for data association.
 STATE_SIZE = 3  # State size [x,y,yaw]
 LM_SIZE = 2  # LM state size [x,y]
 
@@ -208,21 +212,29 @@ def main():
     RFID = np.loadtxt("landmarks_square.txt")
 
     # State Vector [x y yaw v]'
-    xEst = np.zeros((STATE_SIZE, 1))
-    xTrue = np.zeros((STATE_SIZE, 1))
-    PEst = np.eye(STATE_SIZE)
+    # xEst = np.zeros((STATE_SIZE, 1))
+    # xTrue = np.zeros((STATE_SIZE, 1))
+    # xDR = np.zeros((STATE_SIZE, 1))  # Dead reckoning
 
-    xDR = np.zeros((STATE_SIZE, 1))  # Dead reckoning
+    xEst = np.array([1.0, 1, 0]).reshape(3, 1)  # SLAM estimation
+    xTrue = np.array([1.0, 1, 0]).reshape(3, 1)  # True state
+    xDR = np.array([1.0, 1, 0]).reshape(3, 1)  # Dead reckoning
+
+    PEst = np.eye(STATE_SIZE)
 
     # history
     hxEst = xEst
     hxTrue = xTrue
     hxDR = xTrue
 
+    ii = 0
     while SIM_TIME >= time:
         time += DT
         # u = calc_input()
-        u = np.array([1.0, 0]).reshape(2, 1)
+        # u = np.array([1.0, 0]).reshape(2, 1)
+        u = (1/DT) * CONTROL[ii, [1, 0]].reshape((2, 1))
+        print(ii)
+        ii += 1
 
         xTrue, z, xDR, ud = observation(xTrue, xDR, u, RFID)
 

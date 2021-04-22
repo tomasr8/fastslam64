@@ -3,9 +3,9 @@ from utils import dotify
 
 config = {
     "SEED": 7,
-    "N": 1024,  # number of particles
+    "N": 256,  # number of particles
     "DT": 1.0,
-    "THREADS": 512,  # number threads in a block
+    "THREADS": 256,  # number threads in a block
     "GPU_HEAP_SIZE_BYTES": 100000 * 1024,  # available GPU heap size
     "THRESHOLD": 0.8,
     "sensor": {
@@ -13,7 +13,7 @@ config = {
         "FOV": 0.75*np.pi,
         "MISS_PROB": 0,  # probability landmark in range will be missed
         "VARIANCE": [0.15 ** 2, np.deg2rad(1.0) ** 2],
-        "MAX_MEASUREMENTS": 50  # upper bound on the total number of simultaneous measurements
+        "MAX_MEASUREMENTS": 100  # upper bound on the total number of simultaneous measurements
     },
     # "gps": {
     #     "VARIANCE": [0.1 ** 2, 0.1 ** 2, np.deg2rad(1.0) ** 2],
