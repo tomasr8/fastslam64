@@ -77,26 +77,35 @@ def run_rel():
 
 
 def run_mse():
-    # for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]:
-    for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024]:
-    # for N in [4, 8, 16, 32, 64]:
+    for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]:
+    # for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024]:
+    # for N in [4, 8, 16, 32, 64, 128]:
     # for N in [2048, 4096, 8192]:
 
         mse_trans = []
         mse_rot = []
 
+        # for filename in os.listdir('figs_pr'):
+        #     if filename.startswith(f"1_data_{N}_") and filename.endswith(".json"):
+        #         with open(f"figs_pr/{filename}") as f:
         # for filename in os.listdir('figs_jacobi_dist'):
         #     if filename.startswith(f"1_known_data_{N}_") and filename.endswith(".json"):
         #         with open(f"figs_jacobi_dist/{filename}") as f:
         # for filename in os.listdir('figs_jacobi_dist'):
         #     if filename.startswith(f"3_data_{N}_") and filename.endswith(".json"):
         #         with open(f"figs_jacobi_dist/{filename}") as f:
+        # for filename in os.listdir('figs_jacobi_dist'):
+        #     if filename.startswith(f"2_known_data_{N}_") and filename.endswith(".json"):
+        #         with open(f"figs_jacobi_dist/{filename}") as f:
         # for filename in os.listdir('figs_utias'):
             # if filename.startswith(f"2_data_3_1_{N}_") and filename.endswith(".json"):
                 # with open(f"figs_utias/{filename}") as f:
-        for filename in os.listdir('figs_fsonline'):
-            if filename.startswith(f"1_data_{N}_") and filename.endswith(".json"):
-                with open(f"figs_fsonline/{filename}") as f:
+        for filename in os.listdir('figs_utias'):
+            if filename.startswith(f"2_known_data_3_1_{N}_") and filename.endswith(".json"):
+                with open(f"figs_utias/{filename}") as f:
+        # for filename in os.listdir('figs_fsonline'):
+        #     if filename.startswith(f"1_data_{N}_") and filename.endswith(".json"):
+        #         with open(f"figs_fsonline/{filename}") as f:
                     data = json.load(f)
                     t, r = mse(data["ground"], data["predicted"])
                     mse_trans.append(t)
@@ -109,4 +118,5 @@ def run_mse():
         print()
 
 
-run_rel()
+run_mse()
+# run_rel()

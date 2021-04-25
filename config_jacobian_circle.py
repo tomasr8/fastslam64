@@ -3,9 +3,9 @@ from utils import dotify
 
 config = {
     "SEED": 7,
-    "N": 256,  # number of particles
+    "N": 64,  # number of particles
     "DT": 1.0,
-    "THREADS": 256,  # number threads in a block
+    "THREADS": 64,  # number threads in a block
     "GPU_HEAP_SIZE_BYTES": 100000 * 1024,  # available GPU heap size
     "THRESHOLD": 0.8,
     "sensor": {
@@ -27,6 +27,7 @@ config = {
     "LANDMARKS": np.load("circle/landmarks.npy").astype(np.float64),  # landmark positions
     "MAX_LANDMARKS": 500,  # upper bound on the total number of landmarks in the environment
     "START_POSITION": np.array([2, 6, 0], dtype=np.float64)
+    # "START_POSITION": np.load("circle/odom.npy")[START]
 }
 
 

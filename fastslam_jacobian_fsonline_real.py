@@ -195,6 +195,7 @@ def run_SLAM(config, plot=False, seed=None):
             block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
         )
 
+        # visible_measurements = np.zeros((0, 2), dtype=np.float64)
         cuda.memcpy_htod(memory.measurements, visible_measurements)
 
         if "gps" in config and i % config.gps.RATE == 0:
@@ -347,7 +348,7 @@ def run_SLAM(config, plot=False, seed=None):
             "map_covariance": [cov.tolist() for cov in best_covariances]
         }
 
-        fname = f"figs_fsonline/1_gps_data_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
+        fname = f"figs_fsonline/2_data_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
 
         with open(fname, "w") as f:
             json.dump(output, f)
@@ -362,7 +363,7 @@ def run_SLAM(config, plot=False, seed=None):
             plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
 
         plt.legend()
-        fname = f"figs_fsonline/1_gps_plot_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
+        fname = f"figs_fsonline/2_plot_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
         plt.savefig(fname)
 
     stats.summary()

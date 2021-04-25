@@ -16,7 +16,7 @@ from pycuda.driver import limit
 from sensor import Sensor, wrap_angle
 from stats import Stats
 from common import CUDAMemory, resample, rescale, get_pose_estimate
-from cuda.update_jacobian_dist import load_cuda_modules
+from cuda.update_known import load_cuda_modules
 
 def run_SLAM(config, plot=False, seed=None):
     if seed is None:
@@ -38,7 +38,7 @@ def run_SLAM(config, plot=False, seed=None):
     sensor = Sensor(
         config.LANDMARKS, [],
         config.sensor.VARIANCE, config.sensor.RANGE,
-        config.sensor.FOV, config.sensor.MISS_PROB, 0, rb=True
+        config.sensor.FOV, config.sensor.MISS_PROB, 0, rb=True, with_id=True
     )
 
     # vehicle = Vehicle(config.START_POSITION, config.CONTROL_VARIANCE, dt=config.DT)
@@ -68,10 +68,7 @@ def run_SLAM(config, plot=False, seed=None):
 
     for i in range(config.CONTROL.shape[0]):
         stats.start_measuring("Loop")
-        print(i)
-
-        # if i == 200:
-        #     break
+        # print(i)
 
         stats.start_measuring("Measurement")
         # pose = config.GROUND_TRUTH[i]
@@ -97,8 +94,9 @@ def run_SLAM(config, plot=False, seed=None):
         missed_landmarks = measurements["missed"]
         out_of_range_landmarks = measurements["outOfRange"]
 
-        print(len(visible_measurements))
         stats.stop_measuring("Measurement")
+
+        print(visible_measurements)
 
 
         # ===== RESET WEIGHTS =======
@@ -127,11 +125,9 @@ def run_SLAM(config, plot=False, seed=None):
 
         cuda_modules["update"].get_function("update")(
             memory.particles, np.int32(config.N//config.THREADS),
-            memory.scratchpad, np.int32(memory.scratchpad_block_size),
             memory.measurements,
             np.int32(config.N), np.int32(len(visible_measurements)),
-            memory.cov, np.float64(config.THRESHOLD),
-            np.float64(config.sensor.RANGE), np.float64(config.sensor.FOV),
+            memory.cov, 
             np.int32(config.MAX_LANDMARKS),
             block=(config.THREADS, 1, 1)
         )
@@ -145,7 +141,7 @@ def run_SLAM(config, plot=False, seed=None):
             cuda.memcpy_dtoh(particles, memory.particles)
 
             visible_measurements = [[r*np.cos(b + pose[2]), r*np.sin(b + pose[2])]
-                                    for (r, b) in visible_measurements]
+                                    for (r, b, _) in visible_measurements]
 
             visible_measurements = np.array(visible_measurements)
 
@@ -169,6 +165,9 @@ def run_SLAM(config, plot=False, seed=None):
             # plot_history(ax[0], config.DEAD_RECKONING[:(i+1)], color='purple')
             # plot_history(ax[0], dead_reckoning, color='purple')
 
+            for i in range(len(config.LANDMARKS)):
+                ax[0].text(config.LANDMARKS[i, 0], config.LANDMARKS[i, 1], i)
+
             plot_particles_weight(ax[0], particles)
             if(visible_measurements.size != 0):
                 plot_measurement(ax[0], pose[:2], visible_measurements, color="orange", zorder=103)
@@ -187,11 +186,11 @@ def run_SLAM(config, plot=False, seed=None):
             plt.pause(0.001)
 
 
-        # if i == config.CONTROL.shape[0]-1:
-        #     cuda.memcpy_dtoh(particles, memory.particles)
-        #     best = np.argmax(FlatParticle.w(particles))
-        #     best_covariances = FlatParticle.get_covariances(particles, best)
-        #     best_landmarks = FlatParticle.get_landmarks(particles, best)
+        if i == config.CONTROL.shape[0]-1:
+            cuda.memcpy_dtoh(particles, memory.particles)
+            best = np.argmax(FlatParticle.w(particles))
+            best_covariances = FlatParticle.get_covariances(particles, best)
+            best_landmarks = FlatParticle.get_landmarks(particles, best)
 
 
         cuda_modules["weights_and_mean"].get_function("get_weights")(
@@ -199,6 +198,8 @@ def run_SLAM(config, plot=False, seed=None):
             block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
         )
         cuda.memcpy_dtoh(weights, memory.weights)
+
+        # print("weights", weights)
 
         # if i == config.CONTROL.shape[0]-1:
         #     cuda.memcpy_dtoh(particles, memory.particles)
@@ -213,32 +214,32 @@ def run_SLAM(config, plot=False, seed=None):
         stats.stop_measuring("Loop")
 
 
-    # if not plot:
-    #     output = {
-    #         "ground": [list(p) for p in stats.ground_truth_path],
-    #         "predicted": [list(p) for p in stats.predicted_path],
-    #         "landmarks": config.LANDMARKS.tolist(),
-    #         "map": [list(lm) for lm in best_landmarks],
-    #         "map_covariance": [cov.tolist() for cov in best_covariances]
-    #     }
+    if not plot:
+        output = {
+            "ground": [list(p) for p in stats.ground_truth_path],
+            "predicted": [list(p) for p in stats.predicted_path],
+            "landmarks": config.LANDMARKS.tolist(),
+            "map": [list(lm) for lm in best_landmarks],
+            "map_covariance": [cov.tolist() for cov in best_covariances]
+        }
 
-    #     fname = f"figs_jacobi_dist/3_data_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
+        fname = f"figs_jacobi_dist/2_known_data_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
 
-    #     with open(fname, "w") as f:
-    #         json.dump(output, f)
+        with open(fname, "w") as f:
+            json.dump(output, f)
 
-    #     fig, ax = plt.subplots(figsize=(15, 10))
-    #     plot_history(ax, stats.ground_truth_path, color='green', markersize=1, linewidth=1, style="-", label="Ground truth")
-    #     plot_history(ax, stats.predicted_path, color='orange', markersize=1, linewidth=1, style="-", label="SLAM estimate")
-    #     # plot_history(ax, dead_reckoning, color='purple', markersize=1, linewidth=1, style="-", label="Dead reckoning")
-    #     plot_landmarks(ax, config.LANDMARKS, color="blue")
-    #     plot_map(ax, best_landmarks, color="orange", marker="o")
-    #     for i, landmark in enumerate(best_landmarks):
-    #         plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
+        fig, ax = plt.subplots(figsize=(15, 10))
+        plot_history(ax, stats.ground_truth_path, color='green', markersize=1, linewidth=1, style="-", label="Ground truth")
+        plot_history(ax, stats.predicted_path, color='orange', markersize=1, linewidth=1, style="-", label="SLAM estimate")
+        # plot_history(ax, dead_reckoning, color='purple', markersize=1, linewidth=1, style="-", label="Dead reckoning")
+        plot_landmarks(ax, config.LANDMARKS, color="blue")
+        plot_map(ax, best_landmarks, color="orange", marker="o")
+        for i, landmark in enumerate(best_landmarks):
+            plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
 
-    #     plt.legend()
-    #     fname = f"figs_jacobi_dist/3_plot_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
-    #     plt.savefig(fname)
+        plt.legend()
+        fname = f"figs_jacobi_dist/2_known_plot_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
+        plt.savefig(fname)
 
 
 
@@ -248,8 +249,9 @@ def run_SLAM(config, plot=False, seed=None):
 
 
 if __name__ == "__main__":
+    # from config_jacobian import config
+    # from config_jacobian_square import config
     from config_jacobian_circle import config
-    # from config_perf import config
 
     context.set_limit(limit.MALLOC_HEAP_SIZE, config.GPU_HEAP_SIZE_BYTES)
 

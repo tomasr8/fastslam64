@@ -20,7 +20,7 @@ R = np.diag([0.15, np.deg2rad(5.0)]) ** 2
 
 #  Simulation parameter
 Q_sim = np.diag([0.15, np.deg2rad(1.0)]) ** 2
-R_sim = np.diag([0.15, np.deg2rad(5)]) ** 2
+R_sim = np.diag([0.15, np.deg2rad(5.0)]) ** 2
 OFFSET_YAW_RATE_NOISE = 0.00
 
 CONTROL = np.load("circle/control.npy")
@@ -457,7 +457,7 @@ if __name__ == '__main__':
     mse_trans = []
     mse_rot = []
 
-    for i in range(20):
+    for i in range(10):
         print(i)
 
         hxTrue, hxEst = main()

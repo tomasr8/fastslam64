@@ -67,11 +67,14 @@ def run_SLAM(config, plot=False, seed=None):
     stats.add_pose(config.START_POSITION.tolist(), config.START_POSITION.tolist())
     print("starting..")
 
-    dead_reckoning = [config.START_POSITION]
+    # dead_reckoning = [config.START_POSITION]
 
     for i, (g, o) in enumerate(zip(config.GROUND_TRUTH, config.CONTROL)):
         stats.start_measuring("Loop")
         print(f"{i}/{config.CONTROL.shape[0]}")
+        # print(o)
+
+        # o[2] = 0.7*o[2]
         # print(i, g)
         # if i % 100 == 0:
             # print(i)
@@ -81,20 +84,25 @@ def run_SLAM(config, plot=False, seed=None):
 
         stats.start_measuring("Measurement")
 
-        ua = o[2]
-        ub = o[1]
-
-        dead_reckoning.append([
-            dead_reckoning[-1][0] + config.DT * ub * np.cos(dead_reckoning[-1][2]),
-            dead_reckoning[-1][1] + config.DT * ub * np.sin(dead_reckoning[-1][2]),
-            wrap_angle(dead_reckoning[-1][2] + config.DT * ua)
-        ])
+        # ua = o[2]
+        # ub = o[1]
+        # dead_reckoning.append([
+        #     dead_reckoning[-1][0] + config.DT * ub * np.cos(dead_reckoning[-1][2]),
+        #     dead_reckoning[-1][1] + config.DT * ub * np.sin(dead_reckoning[-1][2]),
+        #     wrap_angle(dead_reckoning[-1][2] + config.DT * ua)
+        # ])
 
         t = g[0]
         measurements = config.sensor.MEASUREMENTS[config.sensor.MEASUREMENTS[:, 0] == t]
         # print(measurements)
         # print("================")
         measurements = measurements[:, [2,3,1]].astype(np.float64)
+
+        # if measurements.size != 0:
+        #     print("====================================================")
+        #     print("====================================================")
+        #     print("====================================================")
+
 
         stats.stop_measuring("Measurement")
 
@@ -125,11 +133,9 @@ def run_SLAM(config, plot=False, seed=None):
 
         cuda_modules["update"].get_function("update")(
             memory.particles, np.int32(config.N//config.THREADS),
-            memory.scratchpad, np.int32(memory.scratchpad_block_size),
             memory.measurements,
             np.int32(config.N), np.int32(len(measurements)),
-            memory.cov, np.float64(config.THRESHOLD),
-            np.float64(config.sensor.RANGE), np.float64(config.sensor.FOV),
+            memory.cov,
             np.int32(config.MAX_LANDMARKS),
             block=(config.THREADS, 1, 1)
         )
@@ -163,7 +169,7 @@ def run_SLAM(config, plot=False, seed=None):
                 plot_connections(ax[0], g[1:], measurements + g[1:3])
 
             plot_landmarks(ax[0], config.LANDMARKS[:, 1:], color="blue", zorder=100)
-            plot_history(ax[0], np.array(dead_reckoning)[::50], color='purple')
+            # plot_history(ax[0], np.array(dead_reckoning)[::50], color='purple')
             plot_history(ax[0], stats.ground_truth_path[::50], color='green')
             plot_history(ax[0], stats.predicted_path[::50], color='orange')
             plot_particles_weight(ax[0], particles)
@@ -209,17 +215,19 @@ def run_SLAM(config, plot=False, seed=None):
         output = {
             "ground": stats.ground_truth_path,
             "predicted": stats.predicted_path,
-            "dead_reckoning": [list(pos) for pos in dead_reckoning],
+            # "dead_reckoning": [list(pos) for pos in dead_reckoning],
             "landmarks": config.LANDMARKS[:, 1:].tolist(),
             "map": [list(lm) for lm in best_landmarks],
             "map_covariance": [cov.tolist() for cov in best_covariances]
         }
 
-        with open(f"figs_utias/known_data_{config.DATASET}_{config.ROBOT}_{config.N}_{seed}.json", "w") as f:
+        fname = f"figs_utias/2_known_data_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.json"
+
+        with open(fname, "w") as f:
             json.dump(output, f)
 
         fig, ax = plt.subplots()
-        plot_history(ax, dead_reckoning[::100], color='purple', linewidth=0.3, markersize=0.5)
+        # plot_history(ax, dead_reckoning[::100], color='purple', linewidth=0.3, markersize=0.5)
         plot_history(ax, stats.ground_truth_path[::100], color='green', linewidth=0.3, markersize=0.5)
         plot_history(ax, stats.predicted_path[::100], color='orange', linewidth=0.3, markersize=0.5)
         plot_landmarks(ax, config.LANDMARKS[:, 1:], color="blue")
@@ -227,12 +235,14 @@ def run_SLAM(config, plot=False, seed=None):
         for i, landmark in enumerate(best_landmarks):
             plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
 
-        plt.savefig(f"figs_utias/known_plot_{config.DATASET}_{config.ROBOT}_{config.N}_{seed}.png")
+        fname = f"figs_utias/2_known_plot_{config.DATASET}_{config.ROBOT}_{config.N}_{config.THRESHOLD}_{config.sensor.VARIANCE[0]:.2f}-{config.sensor.VARIANCE[1]:.4f}_{config.CONTROL_VARIANCE[0]:.4f}-{config.CONTROL_VARIANCE[1]:.2f}_{seed}.png"
+        plt.savefig(fname)
 
+    memory.free()
     return stats.mean_path_deviation()
 
 
 if __name__ == "__main__":
-    from config_utias_known import config
+    from config_utias import config
     context.set_limit(limit.MALLOC_HEAP_SIZE, config.GPU_HEAP_SIZE_BYTES)
     run_SLAM(config, plot=True)

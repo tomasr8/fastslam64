@@ -14,7 +14,8 @@ typedef struct
 } landmark_measurements;
 
 __device__ double mod_angle(double angle) {
-    return fmod(angle, (double)(2*M_PI));
+    // return fmod(angle, (double)(2*M_PI));
+    return atan2(sin(angle), cos(angle));
 }
 
 
@@ -208,19 +209,23 @@ __device__ void add_measurements_as_landmarks(double *particle, landmark_measure
 }
 
 
-__device__ void update_landmarks(int p_id, double *particle, landmark_measurements *measurements, int *in_range, int *n_matches, double range, double fov, double thresh)
+__device__ void update_landmarks(int p_id, double *particle, landmark_measurements *measurements)
 {
     double *measurement_cov = measurements->measurement_cov;
     int n_measurements = measurements->n_measurements;
 
-    int n_landmarks = get_n_landmarks(particle);
-
+    
     for(int i = 0; i < n_measurements; i++) {
         double landmark_idx = -1;
+        int n_landmarks = get_n_landmarks(particle);
 
         for(int j = 0; j < n_landmarks; j++) {
             double *p = get_landmark_id(particle, j);
             double id = p[0];
+
+            // if(p_id == 0) {
+            //     printf("Landmark id: %lf, Measurement id: %lf\n", id, measurements->measurements[i][2]);
+            // }
             if(measurements->measurements[i][2] == id) {
                 landmark_idx = j;
                 break;
@@ -296,8 +301,8 @@ __device__ void update_landmarks(int p_id, double *particle, landmark_measuremen
 }
 
 __global__ void update(
-    double *particles, int block_size, int *scratchpad_mem, int scratchpad_size, double measurements_array[][3], int n_particles, int n_measurements,
-    double *measurement_cov, double threshold, double range, double fov, int max_landmarks)
+    double *particles, int block_size, double measurements_array[][3], int n_particles, int n_measurements,
+    double *measurement_cov, int max_landmarks)
 {
 
     if(n_measurements == 0) {
@@ -307,9 +312,6 @@ __global__ void update(
     int block_id = blockIdx.x + blockIdx.y * gridDim.x;
     int thread_id = block_id * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
 
-    int *scratchpad = scratchpad_mem + (2 * thread_id * max_landmarks);
-    int *in_range = scratchpad;
-    int *n_matches = in_range + max_landmarks;
 
     landmark_measurements measurements;
     measurements.n_measurements = n_measurements;
@@ -330,6 +332,6 @@ __global__ void update(
             continue;
         }
 
-        update_landmarks(particle_id, particle, &measurements, in_range, n_matches, range, fov, threshold);
+        update_landmarks(particle_id, particle, &measurements);
     }
 }

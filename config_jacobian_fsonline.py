@@ -13,31 +13,31 @@ N = 0
 
 config = {
     "SEED": 9,
-    "N": 4, # number of particles
+    "N": 256, # number of particles
     "DT": 1.0,
-    "THREADS": 4, # number threads in a block
-    "GPU_HEAP_SIZE_BYTES": 100000 * 1024, # available GPU heap size
-    "THRESHOLD": 3.0,
+    "THREADS": 256, # number threads in a block
+    "GPU_HEAP_SIZE_BYTES": 2 * 100000 * 1024, # available GPU heap size
+    "THRESHOLD": 3.25,
     "sensor": {
         "RANGE": 30,
         "FOV": np.pi,
-        "VARIANCE": [0.25 ** 2, np.deg2rad(3.0) ** 2],
+        "VARIANCE": [0.2 ** 2, np.deg2rad(1.0) ** 2],
         "MAX_MEASUREMENTS": 100, # upper bound on the total number of simultaneous measurements
         "MEASUREMENTS": measurements,
         "MISS_PROB": 0
     },
-    "gps": {
-        "VARIANCE": [0.5 ** 2, 0.5 ** 2, np.deg2rad(4.0) ** 2],
-        "RATE": 10
-    },
+    # "gps": {
+    #     "VARIANCE": [0.5 ** 2, 0.5 ** 2, np.deg2rad(4.0) ** 2],
+    #     "RATE": 10
+    # },
     "ODOMETRY": odometry[N:],
     "ODOMETRY_VARIANCE": [0.1, 0.1, 0.001],
     "CONTROL": control[N:],
-    "CONTROL_VARIANCE": [np.deg2rad(1.0) ** 2, 0.15 ** 2],
+    "CONTROL_VARIANCE": [np.deg2rad(5) ** 2, 0.15 ** 2],
     # "CONTROL_VARIANCE": [np.deg2rad(0.25) ** 2, 0.05 ** 2],
 
     "LANDMARKS": np.load("fsonline/track.npy").astype(np.float64), # landmark positions
-    "MAX_LANDMARKS": 500, # upper bound on the total number of landmarks in the environment
+    "MAX_LANDMARKS": 1000, # upper bound on the total number of landmarks in the environment
     "START_POSITION": odometry[N, :3]
 }
 
