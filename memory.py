@@ -55,9 +55,9 @@ ax.plot(landmarks, memory_unknown[:])
 ax.plot(landmarks, memory_known[:])
 
 
-ax.grid()
+# ax.grid()
 ax.set_ylabel("MB")
-ax.set_xlabel("Number of landmarks")
+# ax.set_xlabel("Number of landmarks")
 
 # plt.xticks([])
 # plt.yticks([])

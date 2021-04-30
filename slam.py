@@ -45,7 +45,7 @@ def relative_error(ground, predicted):
 
 
 
-EXPORT = False
+EXPORT = True
 
 if EXPORT:
     matplotlib.use("pgf")
@@ -57,16 +57,19 @@ if EXPORT:
     })
 
 
-with open("figs_jacobi_dist/3_data_1024_0.8_0.02-0.0003_0.0076-0.02_16.json") as f:
+# with open("figs_jacobi_dist/3_data_1024_0.8_0.02-0.0003_0.0076-0.02_16.json") as f:
+#     data = json.load(f)
+with open("figs_utias/2_data_3_1_8192_1.3_0.18-0.0024_0.0195-0.01_5.json") as f:
     data = json.load(f)
+
 
 fig, ax = plt.subplots()
 
 fig.set_size_inches(w=5.02, h=5.5)
 fig.subplots_adjust(left=0.01, right=0.99, bottom=0.12, top=0.99)
 
-ground = np.array(data["ground"])
-predicted = np.array(data["predicted"])
+ground = np.array(data["ground"])[::50]
+predicted = np.array(data["predicted"])[::50]
 # dr = np.array(data["dead_reckoning"])
 landmarks = np.array(data["landmarks"])
 estimated_landmarks = np.array(data["map"])
@@ -97,6 +100,6 @@ print(relative_error(ground, predicted))
 
 
 if EXPORT:
-    plt.savefig('sim_vis_est.pgf')
+    plt.savefig('utias_vis_est.pgf')
 else:
     plt.show()
