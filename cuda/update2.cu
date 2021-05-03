@@ -1,9 +1,25 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include <curand_kernel.h>
 
 #define M_PI 3.14159265359
 #define MIN(a,b) (((a)<(b))?(a):(b))
+
+
+extern "C" {
+
+__device__ curandState_t* states[<<N_PARTICLES>>];
+
+
+// This function is only called once to initialize the rngs.
+__global__ void init_rng(int seed)
+{
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    curandState_t* s = new curandState_t;
+    curand_init(seed, i, 0, s);
+    states[i] = s;
+}
 
 
 typedef struct 
@@ -224,6 +240,121 @@ __device__ void pinv(double *A, double *B)
     B[3] = scalar * a;
 }
 
+__device__ void inv3(double **A, double **B)
+{
+    double a = A[0][0];
+    double b = A[0][1];
+    double c = A[0][2];
+    double d = A[1][0];
+    double e = A[1][1];
+    double f = A[1][2];
+    double g = A[2][0];
+    double h = A[2][1];
+    double i = A[2][2];
+    
+    double det = a*(e*i - f*h) - b*(d*i - f*g) + c*(d*h - e*g);
+
+    B[0][0] = (e*i - f*h)/det;
+    B[0][1] = -(b*i - c*h)/det;
+    B[0][2] = (b*f - c*e)/det;
+    B[1][0] = -(d*i - f*g)/det;
+    B[1][1] = (a*i - c*g)/det;
+    B[1][2] = -(a*f - c*d)/det;
+    B[2][0] = (d*h - e*g)/det;
+    B[2][1] = -(a*h - b*g)/det;
+    B[2][2] = (a*e - b*d)/det;
+}
+
+__device__ void matmul_mn(int m, int n, int p, double A[][n], double B[][p], double C[][p])
+{
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < p; j++) {
+            for(int k = 0; k < n; k++) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
+
+__device__ void get_new_state(
+    double *state_mean, double **state_sigma, double *S_inv_1d, double **Hx, double **Hxt, double *measurement, double*measurement_predicted,
+    double *new_state_mean, double **new_state_sigma
+)
+{
+    double S_inv[2][2] = {
+        {S_inv_1d[0], S_inv_1d[1]},
+        {S_inv_1d[2], S_inv_1d[3]}
+    };
+
+    double HxtSinv[3][2] = {
+        {0, 0},
+        {0, 0},
+        {0, 0}
+    };
+
+    matmul_mn(3, 2, 2, Hxt, S_inv, HxtSinv);
+
+    double HxtSinvHx[3][3] = {
+        {0, 0, 0},
+        {0, 0, 0},
+        {0, 0, 0}
+    };
+
+    matmul_mn(3, 2, 3, HxtSinv, Hx, HxtSinvHx);
+
+    double state_sigma_inv[3][3] = {
+        {0, 0, 0},
+        {0, 0, 0},
+        {0, 0, 0}
+    };
+
+    inv3(state_sigma, state_sigma_inv);
+
+    state_sigma_inv[0][0] += HxtSinvHx[0][0];
+    state_sigma_inv[0][1] += HxtSinvHx[0][1];
+    state_sigma_inv[0][2] += HxtSinvHx[0][2];
+    state_sigma_inv[1][0] += HxtSinvHx[1][0];
+    state_sigma_inv[1][1] += HxtSinvHx[1][1];
+    state_sigma_inv[1][2] += HxtSinvHx[1][2];
+    state_sigma_inv[2][0] += HxtSinvHx[2][0];
+    state_sigma_inv[2][1] += HxtSinvHx[2][1];
+    state_sigma_inv[2][2] += HxtSinvHx[2][2];
+
+    // double new_state_sigma[][] = {
+    //     {0, 0, 0},
+    //     {0, 0, 0},
+    //     {0, 0, 0}
+    // }
+
+    inv3(state_sigma_inv, new_state_sigma);
+
+    double new_sigma_HxtSinv[3][2] = {
+        {0, 0},
+        {0, 0},
+        {0, 0}
+    };
+
+    matmul_mn(3, 2, 2, new_state_sigma, HxtSinv, new_sigma_HxtSinv);
+    double dz[2] = { measurement[0] - measurement_predicted[0], mod_angle(measurement[1] - measurement_predicted[1]) };
+
+    // double new_state_mean[] = { state_mean[0], state_mean[1], state_mean[2] };
+
+    new_state_mean[0] += (new_sigma_HxtSinv[0][0]*dz[0] + new_sigma_HxtSinv[0][1]*dz[1]);
+    new_state_mean[1] += (new_sigma_HxtSinv[1][0]*dz[0] + new_sigma_HxtSinv[1][1]*dz[1]);
+    new_state_mean[2] += (new_sigma_HxtSinv[2][0]*dz[0] + new_sigma_HxtSinv[2][1]*dz[1]);
+    new_state_mean[2] = mod_angle(new_state_mean[2]);
+}
+
+__device__ void add_motion_fix(double **Hx, double **Hxt, double **Q, double **HxQHxt)  {
+    double HxQ[2][3] = {
+        {0, 0, 0},
+        {0, 0, 0}
+    };
+
+    matmul_mn(2, 3, 3, Hx, Q, HxQ);
+    matmul_mn(2, 3, 2, HxQ, Hxt, HxQHxt);
+}
+
 __device__ double pdf(double *x, double *mean, double* cov)
 {
     double cov_inv[] = {0, 0, 0, 0};
@@ -309,6 +440,22 @@ __device__ double compute_dist(double *particle, int i, double *measurement, dou
     return dist;
 }
 
+__device__ void predict_from_model(double *particle, double ua, double ub, double dt) {
+    if(ua == 0.0 && ub == 0.0) {
+        return;
+    }
+
+    double angle = particle[2];
+
+    particle[2] += (ua * dt);
+    // particle[2] = fmod(particle[2], (double)(2*M_PI));
+    particle[2] = atan2(sin(particle[2]), cos(particle[2]));
+
+    double dist = (ub * dt);
+    particle[0] += cos(angle) * dist;
+    particle[1] += sin(angle) * dist;
+}
+
 
 __device__ void update_landmarks(int id, double *particle, landmark_measurements *measurements, int *in_range, int *n_matches, double range, double fov, double thresh)
 {
@@ -329,7 +476,11 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
         // }
     }
 
-    // printf("START n_in_range(%d), n_landmarks(%d)\n", n_in_range, n_landmarks);
+    
+    double state_mean[] = { particle[0], particle[1], particle[2] };
+    double P[3][3] = { {0.1, 0, 0}, {0, 0.1, 0}, {0, 0, 0.05} };
+    double state_sigma[3][3] = { {0.1, 0, 0}, {0, 0.1, 0}, {0, 0, 0.05} };
+
     for(int i = 0; i < n_measurements; i++) {
         double best = 1000000.0;
         int best_idx = -1;
@@ -344,16 +495,11 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
             }
         }
 
-        // if(id == 0) {
-        //     printf("best dist: %f, thresh: %f\n", best, thresh);
-        // }
 
         if(best_idx != -1) {
             n_matches[best_idx]++;
         }
 
-
-        // printf("Measurement(%d) matched to (%d)\n", i, best_idx);
 
         if(best_idx != -1) {
             double *landmark = get_mean(particle, best_idx);
@@ -380,6 +526,17 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
             double Ht[] = {
                 H[0], H[2],
                 H[1], H[3]
+            };
+
+            double Hx[2][3] = {
+                {(landmark[0] - pos[0])/(sqrt(q)), (landmark[1] - pos[1])/(sqrt(q)), 0},
+                {-(landmark[1] - pos[1])/q, (landmark[0] - pos[0])/q, -1}
+            };
+
+            double Hxt[3][2] = {
+                {Hx[0][0], Hx[1][0]},
+                {Hx[0][1], Hx[1][1]},
+                {Hx[0][2], Hx[1][2]}
             };
 
             double S[] = {
@@ -412,6 +569,47 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
             landmark_cov[2] = new_cov[2];
             landmark_cov[3] = new_cov[3];
 
+            double new_state_sigma[3][3] = {
+                {0, 0, 0},
+                {0, 0, 0},
+                {0, 0, 0}
+            };
+
+            double new_state_mean[] = {0, 0, 0};
+
+            get_new_state(
+                state_mean, state_sigma, S_inv, Hx, Hxt, measurements->measurements[i], measurement_predicted,
+                new_state_mean, new_state_sigma
+            );
+
+            state_mean[0] = new_state_mean[0];
+            state_mean[1] = new_state_mean[1];
+            state_mean[2] = new_state_mean[2];
+
+            state_sigma[0][0] = new_state_sigma[0][0];
+            state_sigma[0][1] = new_state_sigma[0][1];
+            state_sigma[0][2] = new_state_sigma[0][2];
+            state_sigma[1][0] = new_state_sigma[1][0];
+            state_sigma[1][1] = new_state_sigma[1][1];
+            state_sigma[1][2] = new_state_sigma[1][2];
+            state_sigma[2][0] = new_state_sigma[2][0];
+            state_sigma[2][1] = new_state_sigma[2][1];
+            state_sigma[2][2] = new_state_sigma[2][2];
+
+            particle[0] = state_mean[0];
+            particle[1] = state_mean[1];
+            particle[2] = state_mean[2];
+
+            double HxSHxt[2][2] = {
+                {0, 0},
+                {0, 0}
+            };
+            add_motion_fix(Hx, Hxt, P, HxSHxt);
+            S[0] += HxSHxt[0][0];
+            S[1] += HxSHxt[0][1];
+            S[2] += HxSHxt[1][0];
+            S[3] += HxSHxt[1][1];
+
             particle[3] *= pdf(measurements->measurements[i], measurement_predicted, S);
             // particle[3] *= 2.0;
             // particle[3] += 1e-38;
@@ -436,8 +634,8 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
 }
 
 __global__ void update(
-    double *particles, int block_size, int *scratchpad_mem, int scratchpad_size, double measurements_array[][2], int n_particles, int n_measurements,
-    double *measurement_cov, double threshold, double range, double fov, int max_landmarks)
+    double *particles, int *scratchpad_mem, int scratchpad_size, double measurements_array[][2], int n_particles, int n_measurements,
+    double *measurement_cov, double threshold, double range, double fov, int max_landmarks, double ua, double ub, double dt)
 {
 
     if(n_measurements == 0) {
@@ -456,20 +654,22 @@ __global__ void update(
     measurements.measurement_cov = measurement_cov;
     measurements.measurements = measurements_array;
 
-    for(int k = 0; k < block_size; k++) {
-        int particle_id = thread_id*block_size + k;
-        if(particle_id >= n_particles) {
-            return;
-        }
-        
-        double *particle = get_particle(particles, particle_id);
-        int n_landmarks = get_n_landmarks(particle);
-    
-        if(n_landmarks == 0) {
-            add_measurements_as_landmarks(particle, &measurements);
-            continue;
-        }
-
-        update_landmarks(particle_id, particle, &measurements, in_range, n_matches, range, fov, threshold);
+    int particle_id = thread_id;
+    if(particle_id >= n_particles) {
+        return;
     }
+    
+    double *particle = get_particle(particles, particle_id);
+    int n_landmarks = get_n_landmarks(particle);
+
+    predict_from_model(particle, ua, ub, dt);
+
+    if(n_landmarks == 0) {
+        add_measurements_as_landmarks(particle, &measurements);
+        return;
+    }
+
+    update_landmarks(particle_id, particle, &measurements, in_range, n_matches, range, fov, threshold);
+}
+
 }

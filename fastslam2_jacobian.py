@@ -16,7 +16,7 @@ from pycuda.driver import limit
 from sensor import Sensor, wrap_angle
 from stats import Stats
 from common import CUDAMemory, resample, rescale, get_pose_estimate
-from cuda.update_jacobian_dist import load_cuda_modules
+from cuda.update2 import load_cuda_modules
 
 def run_SLAM(config, plot=False, seed=None):
     if seed is None:
@@ -109,14 +109,7 @@ def run_SLAM(config, plot=False, seed=None):
 
         cuda.memcpy_htod(memory.measurements, visible_measurements)
 
-        if "gps" in config and i % config.gps.RATE == 0:
-            cuda_modules["predict"].get_function("predict_from_imu")(
-                memory.particles,
-                np.float64(pose[0]), np.float64(pose[1]), np.float64(pose[2]),
-                np.float64(config.gps.VARIANCE[0] ** 0.5), np.float64(config.gps.VARIANCE[1] ** 0.5), np.float64(config.gps.VARIANCE[2] ** 0.5),
-                block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
-            )
-        else:
+        if len(measurements) == 0:
             cuda_modules["predict"].get_function("predict_from_model")(
                 memory.particles,
                 np.float64(config.CONTROL[i, 0]), np.float64(config.CONTROL[i, 1]),
@@ -133,6 +126,8 @@ def run_SLAM(config, plot=False, seed=None):
             memory.cov, np.float64(config.THRESHOLD),
             np.float64(config.sensor.RANGE), np.float64(config.sensor.FOV),
             np.int32(config.MAX_LANDMARKS),
+            np.float64(config.CONTROL_VARIANCE[0] ** 0.5), np.float64(config.CONTROL_VARIANCE[1] ** 0.5),
+            np.float64(config.DT),
             block=(config.THREADS, 1, 1)
         )
         
@@ -253,7 +248,7 @@ if __name__ == "__main__":
 
     context.set_limit(limit.MALLOC_HEAP_SIZE, config.GPU_HEAP_SIZE_BYTES)
 
-    run_SLAM(config, plot=False)
+    run_SLAM(config, plot=True)
 
     # context.set_limit(limit.MALLOC_HEAP_SIZE, config.GPU_HEAP_SIZE_BYTES)
     # print(repeat(run_SLAM, seeds=np.arange(100)))

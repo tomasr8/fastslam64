@@ -59,7 +59,9 @@ if EXPORT:
 
 # with open("figs_jacobi_dist/3_data_1024_0.8_0.02-0.0003_0.0076-0.02_16.json") as f:
 #     data = json.load(f)
-with open("figs_utias/2_data_3_1_8192_1.3_0.18-0.0024_0.0195-0.01_5.json") as f:
+# with open("figs_utias/2_data_3_1_8192_1.3_0.18-0.0024_0.0195-0.01_5.json") as f:
+#     data = json.load(f)
+with open("figs_utias/2_data_3_1_16_1.3_0.18-0.0024_0.0195-0.01_16.json") as f:
     data = json.load(f)
 
 
@@ -100,6 +102,6 @@ print(relative_error(ground, predicted))
 
 
 if EXPORT:
-    plt.savefig('utias_vis_est.pgf')
+    plt.savefig('utias_vis_est_divergence.pgf')
 else:
     plt.show()

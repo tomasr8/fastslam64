@@ -65,8 +65,8 @@ __global__ void predict_from_model(double *particles, double ua, double ub, doub
     // to get a general N(mu, sigma), we use Y = mu + sigma*X,
     // though in our case mu=0.
     particle[2] += (ua * dt);
-    particle[2] = fmod(particle[2], (double)(2*M_PI));
-    // particle[2] = atan2(sin(particle[2]), cos(particle[2]));
+    // particle[2] = fmod(particle[2], (double)(2*M_PI));
+    particle[2] = atan2(sin(particle[2]), cos(particle[2]));
 
 
     double dist = (ub * dt);

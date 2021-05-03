@@ -23,7 +23,7 @@ def get_memory(n_particles, n_landmarks, known=False):
     return memory/(1024**2)
 
 
-EXPORT = False
+EXPORT = True
 
 if EXPORT:
     matplotlib.use("pgf")
@@ -37,8 +37,8 @@ if EXPORT:
 
 fig, ax = plt.subplots()
 
-fig.set_size_inches(w=5.02, h=3.0)
-fig.subplots_adjust(left=0.13, right=0.99, bottom=0.18, top=0.99)
+fig.set_size_inches(w=5.02, h=4.0)
+fig.subplots_adjust(left=0.13, right=0.99, bottom=0.1, top=0.99)
 
 # particles = [1, 10, 100, 1000, 10000]
 # n_landmarks = 1000
@@ -49,14 +49,19 @@ n_particles = 128
 landmarks = [1, 10, 100, 1000, 10000]
 memory_unknown = [get_memory(n_particles, nl) for nl in landmarks]
 memory_known = [get_memory(n_particles, nl, known=True) for nl in landmarks]
+ax.plot(landmarks, memory_unknown[:], label="Unknown correspondence (128)", c="#ff7f0e")
+ax.plot(landmarks, memory_known[:], label="Known correspondence (128)", c="#d62728")
 
-# print(memory)
-ax.plot(landmarks, memory_unknown[:])
-ax.plot(landmarks, memory_known[:])
-
+n_particles = 1024
+landmarks = [1, 10, 100, 1000, 10000]
+memory_unknown = [get_memory(n_particles, nl) for nl in landmarks]
+memory_known = [get_memory(n_particles, nl, known=True) for nl in landmarks]
+ax.plot(landmarks, memory_unknown[:], label="Unknown correspondence (1024)", c="#1f77b4")
+ax.plot(landmarks, memory_known[:], label="Known correspondence (1024)", c="#2ca02c")
 
 # ax.grid()
-ax.set_ylabel("MB")
+ax.set_ylabel("Memory (MB)")
+plt.legend()
 # ax.set_xlabel("Number of landmarks")
 
 # plt.xticks([])

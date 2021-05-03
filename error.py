@@ -51,19 +51,34 @@ def mse(ground, predicted):
 
 
 def run_rel():
-    for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024]:
-        indices = [0, 123, 209, 313, 391, 478, 585, 683, 783, 915, 997, 1082, 1124]
-        tuples = []
-        for i in range(len(indices) - 1):
-            tuples.append([indices[i], indices[i+1]])
-        tuples.append([indices[-1], indices[0]])
+    # for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024]:
+    for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]:
+
+        # indices = [0, 123, 209, 313, 391, 478, 585, 683, 783, 915, 997, 1082, 1124]
+        # tuples = []
+        # for i in range(len(indices) - 1):
+        #     tuples.append([indices[i], indices[i+1]])
+        # tuples.append([indices[-1], indices[0]])
+
+        tuples = [
+            (0, 30000), (30000, 66660), (0, 15000), (15000, 45000),
+            (45000, 66660), (0, 66660), (0, 10000), (10000, 20000),
+            (20000, 30000), (30000, 40000), (40000, 50000), (50000, 60000),
+            (60000, 66660)
+        ]
 
         rel_trans = []
         rel_rot = []
 
-        for filename in os.listdir('figs_jacobi_dist'):
-            if filename.startswith(f"2_known_data_{N}_") and filename.endswith(".json"):
-                with open(f"figs_jacobi_dist/{filename}") as f:
+        # for filename in os.listdir('figs_utias'):
+        #     if filename.startswith(f"2_data_3_1_{N}_") and filename.endswith(".json"):
+        #         with open(f"figs_utias/{filename}") as f:
+        for filename in os.listdir('figs_utias'):
+            if filename.startswith(f"2_known_data_3_1_{N}_") and filename.endswith(".json"):
+                with open(f"figs_utias/{filename}") as f:
+        # for filename in os.listdir('figs_jacobi_dist'):
+        #     if filename.startswith(f"2_known_data_{N}_") and filename.endswith(".json"):
+        #         with open(f"figs_jacobi_dist/{filename}") as f:
         # for filename in os.listdir('figs_jacobi_dist'):
         #     if filename.startswith(f"3_data_{N}_") and filename.endswith(".json"):
         #         with open(f"figs_jacobi_dist/{filename}") as f:
@@ -80,8 +95,8 @@ def run_rel():
 
 
 def run_mse():
-    # for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]:
-    for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024]:
+    for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]:
+    # for N in [4, 8, 16, 32, 64, 128, 256, 512, 1024]:
     # for N in [4, 8, 16, 32, 64, 128]:
     # for N in [2048, 4096, 8192]:
 
@@ -97,12 +112,12 @@ def run_mse():
         # for filename in os.listdir('figs_jacobi_dist'):
         #     if filename.startswith(f"3_data_{N}_") and filename.endswith(".json"):
         #         with open(f"figs_jacobi_dist/{filename}") as f:
-        for filename in os.listdir('figs_jacobi_dist'):
-            if filename.startswith(f"2_known_data_{N}_") and filename.endswith(".json"):
-                with open(f"figs_jacobi_dist/{filename}") as f:
-        # for filename in os.listdir('figs_utias'):
-            # if filename.startswith(f"2_data_3_1_{N}_") and filename.endswith(".json"):
-                # with open(f"figs_utias/{filename}") as f:
+        # for filename in os.listdir('figs_jacobi_dist'):
+        #     if filename.startswith(f"2_known_data_{N}_") and filename.endswith(".json"):
+        #         with open(f"figs_jacobi_dist/{filename}") as f:
+        for filename in os.listdir('figs_utias'):
+            if filename.startswith(f"2_data_3_1_{N}_") and filename.endswith(".json"):
+                with open(f"figs_utias/{filename}") as f:
         # for filename in os.listdir('figs_utias'):
         #     if filename.startswith(f"2_known_data_3_1_{N}_") and filename.endswith(".json"):
         #         with open(f"figs_utias/{filename}") as f:

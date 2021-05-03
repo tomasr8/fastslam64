@@ -18,21 +18,29 @@ if EXPORT:
 
 fig, ax = plt.subplots()
 fig.set_size_inches(w=5.02, h=4)
-fig.subplots_adjust(left=0.12, right=0.99, bottom=0.1, top=0.99)
+fig.subplots_adjust(left=0.12, right=0.99, bottom=0.14, top=0.99)
 
 # UTIAS
 # =====================================================
-error = [4.10, 2.08, 1.18, 2.00, 2.40, 1.02, 0.60, 0.82, 0.30, 0.06, 0.03, 0.03]
-yerr = [0.41, 0.17, 0.08, 0.14, 0.15, 0.09, 0.05, 0.07, 0.02, 0.02, 0.02, 0.02]
-ax.errorbar(np.arange(12), error, yerr=yerr, capsize=5, label="Unknown correspondence")
+# error = [4.10, 2.08, 1.18, 2.00, 2.40, 1.02, 0.60, 0.82, 0.30, 0.06, 0.03, 0.03]
+# yerr = [0.41, 0.17, 0.08, 0.14, 0.15, 0.09, 0.05, 0.07, 0.02, 0.02, 0.02, 0.02]
+# ax.errorbar(np.arange(12), error, yerr=yerr, capsize=5, label="Unknown correspondence")
 
-error = [0.11, 0.06, 0.05, 0.05, 0.04, 0.04, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
-yerr = [0.04, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
-ax.errorbar(np.arange(12), error, yerr=yerr, capsize=5, label="Known correspondence")
+# error = [0.11, 0.06, 0.05, 0.05, 0.04, 0.04, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
+# yerr = [0.04, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
+# ax.errorbar(np.arange(12), error, yerr=yerr, capsize=5, label="Known correspondence")
 
-plt.xticks(ticks=np.arange(12), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192], rotation = 45)
-ax.set_ylabel("MSE(trans)")
-plt.legend()
+# # error = [5.73, 2.83, 2.25, 2.47, 2.78, 1.42, 1.03, 1.16, 0.44, 0.30, 0.03, 0.03]
+# # yerr = [6.28, 3.52, 1.95, 3.24, 2.96, 2.14, 1.96, 2.09, 1.12, 0.93, 0.01, 0.01]
+# # ax.errorbar(np.arange(12), error, yerr=yerr, capsize=5, label="Rel(trans) unknown correspondence")
+
+# # error = [0.12, 0.06, 0.06, 0.05, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04]
+# # yerr = [0.04, 0.02 ,0.03, 0.02, 0.02, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+# # ax.errorbar(np.arange(12), error, yerr=yerr, capsize=5, label="Rel(trans) known correspondence")
+
+# plt.xticks(ticks=np.arange(12), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192], rotation = 45)
+# ax.set_ylabel("MSE(trans)")
+# plt.legend()
 # =====================================================
 
 # square
@@ -142,27 +150,29 @@ plt.legend()
 
 # perf circle
 # ================================================
-# # unknown
-# error = [0.5, 0.5, 0.46, 0.43, 0.4, 0.4, 0.39, 0.42, 0.45, 0.55, 1.32, 2.96, 7.3]
-# yerr = [0.04, 0.02, 0.02, 0.00, 0.02, 0.01, 0, 0.02, 0, 0.01, 0.01, 0.01, 0.02]
-# # plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
-# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], error, yerr=yerr, capsize=5, label="Unknown correspondence")
+# unknown
+error = [0.5, 0.5, 0.46, 0.43, 0.4, 0.4, 0.39, 0.42, 0.45, 0.55, 1.32, 2.96, 7.3]
+yerr = [0.04, 0.02, 0.02, 0.00, 0.02, 0.01, 0, 0.02, 0, 0.01, 0.01, 0.01, 0.02]
+# plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
+plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], error, yerr=yerr, capsize=5, label="Unknown correspondence")
 
-# # known
-# error = [0.3, 0.3, 0.3, 0.3, 0.29, 0.3, 0.29, 0.32, 0.32, 0.38, 0.52, 0.98, 3.1]
-# yerr = [0.03, 0.02, 0.03, 0.02, 0.01, 0.02, 0.01, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
-# # plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
-# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], error, yerr=yerr, capsize=5, label="Known correspondence")
+# known
+error = [0.3, 0.3, 0.3, 0.3, 0.29, 0.3, 0.29, 0.32, 0.32, 0.38, 0.52, 0.98, 3.1]
+yerr = [0.03, 0.02, 0.03, 0.02, 0.01, 0.02, 0.01, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
+# plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
+plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], error, yerr=yerr, capsize=5, label="Known correspondence")
 
-# # PR
-# error = [3.14, 6.17, 12.5, 23.26, 52.63, 90.9, 201.44, 333.3, 1021.51]
-# yerr = [0.02, 0.02, 0.04, 0.07, 0.1, 0.12, 0.19, 0.26, 0.32]
-# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024], error, yerr=yerr, capsize=5, label="Python Robotics (known)")
+# PR
+error = [3.14, 6.17, 12.5, 23.26, 52.63, 90.9, 201.44, 333.3, 1021.51]
+yerr = [0.02, 0.02, 0.04, 0.07, 0.1, 0.12, 0.19, 0.26, 0.32]
+plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024], error, yerr=yerr, capsize=5, label="Python Robotics (known)")
 
-# # plt.xticks(ticks=np.arange(13), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], rotation=45)
-# plt.xticks(ticks=[4, 512, 1024, 2048, 4096, 8192, 16384], labels=[4, 512, 1024, 2048, 4096, 8192, 16384], rotation=45)
-# ax.set_ylabel("Time (s)")
-# plt.legend()
+# plt.xticks(ticks=np.arange(13), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], rotation=45)
+plt.xticks(ticks=[4, 512, 1024, 2048, 4096, 8192, 16384], labels=[4, 512, 1024, 2048, 4096, 8192, 16384], rotation=45)
+ax.set_ylabel("Time (s)")
+ax.set_yscale("log")
+
+plt.legend()
 # ================================================
 
 
@@ -171,7 +181,7 @@ plt.legend()
 # plt.grid()
 
 if EXPORT:
-    plt.savefig('sim_mse.pgf')
+    plt.savefig('perf_circle.pgf')
 else:
     plt.show()
 
