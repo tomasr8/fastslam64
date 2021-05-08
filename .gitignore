@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# pgf files
+*.pgf
+
 # Distribution / packaging
 .Python
 build/

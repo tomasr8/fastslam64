@@ -73,47 +73,48 @@ def run_SLAM(config, plot=False, seed=None):
     stamps = np.array([m['stamp'] for m in config.sensor.MEASUREMENTS])
 
     if plot:
-        fig, ax = plt.subplots(2, 1, figsize=(10, 5))
-        ax[0].axis('scaled')
-        ax[1].axis('scaled')
+        fig, ax = plt.subplots(1, figsize=(10, 5))
+        ax.axis('scaled')
+        # ax[0].axis('scaled')
+        # ax[1].axis('scaled')
 
-    sensor = Sensor(
-        config.LANDMARKS, [],
-        config.sensor.VARIANCE * 5, config.sensor.RANGE,
-        config.sensor.FOV, config.sensor.MISS_PROB, 0, rb=True
-    )
+    # sensor = Sensor(
+    #     config.LANDMARKS, [],
+    #     config.sensor.VARIANCE * 5, config.sensor.RANGE,
+    #     config.sensor.FOV, config.sensor.MISS_PROB, 0, rb=True
+    # )
 
-    stats = Stats("Loop", "Measurement")
-    stats.add_pose(config.START_POSITION, config.START_POSITION)
-    print("starting..")
+    # stats = Stats("Loop", "Measurement")
+    # stats.add_pose(config.START_POSITION, config.START_POSITION)
+    # print("starting..")
 
     pose = np.copy(config.START_POSITION)
 
     all_measurements_real = []
-    all_measurements_fake = []
+    # all_measurements_fake = []
 
 
     for i in range(config.CONTROL.shape[0]):
-        stats.start_measuring("Loop")
-        print(f"iteration: {i}")
+        # stats.start_measuring("Loop")
+        # print(f"iteration: {i}")
 
 
-        stats.start_measuring("Measurement")
+        # stats.start_measuring("Measurement")
         stamp = config.ODOMETRY[i, -1]
 
         pose = motion_model(pose, config.CONTROL[i])
 
-        print(pose, config.ODOMETRY[i, :-1])
+        # print(pose, config.ODOMETRY[i, :-1])
 
-        if i % 15 == 0:
-            measurements = sensor.get_noisy_measurements(pose)
-            visible_measurements = measurements["observed"]
-        else:
-            visible_measurements = np.zeros(0, dtype=np.float64)
+        # if i % 15 == 0:
+        #     measurements = sensor.get_noisy_measurements(pose)
+        #     visible_measurements = measurements["observed"]
+        # else:
+        #     visible_measurements = np.zeros(0, dtype=np.float64)
 
-        for m in visible_measurements:
-            rel = rb2xy(pose, m)
-            all_measurements_fake.append([pose[0] + rel[0], pose[1] + rel[1]])
+        # for m in visible_measurements:
+        #     rel = rb2xy(pose, m)
+        #     all_measurements_fake.append([pose[0] + rel[0], pose[1] + rel[1]])
 
         argmin = min_dist(stamps, stamp)
         if argmin is None:
@@ -127,8 +128,8 @@ def run_SLAM(config, plot=False, seed=None):
 
             # measurements[:, 1] -= 0.3
 
-            for i in range(len(measurements)):
-                measurements[i] = xy2rb(pose, measurements[i])
+            # for i in range(len(measurements)):
+            #     measurements[i] = xy2rb(pose, measurements[i])
 
             # measurements[:, 0] -= pose[0]
             # measurements[:, 1] -= pose[1]
@@ -137,8 +138,10 @@ def run_SLAM(config, plot=False, seed=None):
 
 
         for m in visible_measurements:
-            rel = rb2xy(pose, m)
-            all_measurements_real.append([pose[0] + rel[0], pose[1] + rel[1]])
+            # rel = rb2xy(pose, m)
+            # all_measurements_real.append([pose[0] + rel[0], pose[1] + rel[1]])
+            all_measurements_real.append(m)
+
 
         # measured_pose = [
         #     pose[0] + np.random.normal(0, config.ODOMETRY_VARIANCE[0]),
@@ -146,18 +149,23 @@ def run_SLAM(config, plot=False, seed=None):
         #     pose[2] + np.random.normal(0, config.ODOMETRY_VARIANCE[2])
         # ]
 
-        stats.stop_measuring("Measurement")
+        # stats.stop_measuring("Measurement")
 
 
-        if plot:
-            ax[0].clear()
-            ax[1].clear()
-            ax[0].set_xlim([-160, 10])
-            ax[0].set_ylim([-30, 50])
-            ax[1].set_xlim([-160, 10])
-            ax[1].set_ylim([-30, 50])
-            ax[0].set_axis_off()
-            ax[1].set_axis_off()
+        if False:#plot:
+            # ax[0].clear()
+            # ax[1].clear()
+            # ax[0].set_xlim([-160, 10])
+            # ax[0].set_ylim([-30, 50])
+            # ax[1].set_xlim([-160, 10])
+            # ax[1].set_ylim([-30, 50])
+            # ax[0].set_axis_off()
+            # ax[1].set_axis_off()
+
+            ax.clear()
+            ax.set_xlim([-160, 10])
+            ax.set_ylim([-30, 50])
+            ax.set_axis_off()
 
 
             visible_measurements = np.array([rb2xy(pose, m) for m in visible_measurements])
@@ -170,17 +178,17 @@ def run_SLAM(config, plot=False, seed=None):
 
             # print(np.array(all_measurements))
             if len(all_measurements_real) > 0:
-                plot_measurement(ax[0], np.zeros(2), np.array(all_measurements_real), color="orange", zorder=103, size=5)
+                plot_measurement(ax, np.zeros(2), np.array(all_measurements_real), color="orange", zorder=103, size=3)
 
-            if len(all_measurements_fake) > 0:
-                plot_measurement(ax[1], np.zeros(2), np.array(all_measurements_fake), color="orange", zorder=103, size=5)
+            # if len(all_measurements_fake) > 0:
+            #     plot_measurement(ax[1], np.zeros(2), np.array(all_measurements_fake), color="orange", zorder=103, size=5)
 
-            plot_landmarks(ax[0], config.LANDMARKS, color="blue", zorder=100)
-            plot_landmarks(ax[1], config.LANDMARKS, color="blue", zorder=100)
+            plot_landmarks(ax, config.LANDMARKS, color="blue", zorder=104, s=4)
+            # plot_landmarks(ax[1], config.LANDMARKS, color="blue", zorder=100)
 
             # plot_history(ax[0], stats.ground_truth_path, color='green')
             # plot_history(ax[0], stats.predicted_path, color='orange')
-            plot_history(ax[0], config.ODOMETRY[:i], color='red')
+            plot_history(ax, config.ODOMETRY[:i], color='red')
 
 
             plt.pause(0.01)
@@ -188,8 +196,21 @@ def run_SLAM(config, plot=False, seed=None):
             #     plt.pause(2)
 
 
-        stats.stop_measuring("Loop")
+        # stats.stop_measuring("Loop")
 
+
+    ax.clear()
+    ax.set_xlim([-160, 10])
+    ax.set_ylim([-30, 50])
+    ax.set_axis_off()
+
+    plot_measurement(ax, np.zeros(2), np.array(all_measurements_real), color="orange", zorder=103, size=3)
+
+    plot_landmarks(ax, config.LANDMARKS, color="blue", zorder=104, s=4)
+    plot_history(ax, config.ODOMETRY[:i], color='red')
+
+
+    plt.show()
 
     return []
 

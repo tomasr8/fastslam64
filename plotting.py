@@ -7,8 +7,8 @@ def plot_history(ax, history, color='green', markersize=3, linewidth=2, style="-
     history = np.array(history)
     ax.plot(history[:, 0], history[:, 1], style, markersize=markersize, color=color, linewidth=linewidth, label=label)
 
-def plot_landmarks(ax, landmarks, color='blue', zorder=0, label=None):
-    ax.scatter(landmarks[:, 0], landmarks[:, 1], marker=(7, 1, 0), color=color, zorder=zorder, label=label)
+def plot_landmarks(ax, landmarks, color='blue', zorder=0, label=None, s=None):
+    ax.scatter(landmarks[:, 0], landmarks[:, 1], marker=(7, 1, 0), color=color, zorder=zorder, label=label, s=s)
 
 def plot_map(ax, landmarks, color='blue', marker="."):
     ax.scatter(landmarks[:, 0], landmarks[:, 1], s=10, marker=marker, color=color)

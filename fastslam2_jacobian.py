@@ -51,10 +51,14 @@ def run_SLAM(config, plot=False, seed=None):
     memory = CUDAMemory(config)
     weights = np.zeros(config.N, dtype=np.float64)
 
-    cuda.memcpy_htod(memory.cov, 8 * config.sensor.COVARIANCE)
+    cuda.memcpy_htod(memory.cov, config.sensor.COVARIANCE)
     cuda.memcpy_htod(memory.particles, particles)
 
     cuda_modules["predict"].get_function("init_rng")(
+        np.int32(seed), block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
+    )
+
+    cuda_modules["update"].get_function("init_rng")(
         np.int32(seed), block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
     )
 
@@ -69,6 +73,9 @@ def run_SLAM(config, plot=False, seed=None):
     for i in range(config.CONTROL.shape[0]):
         stats.start_measuring("Loop")
         print(i)
+
+        # if i == 15:
+        #     break
 
         # if i == 200:
         #     break
@@ -119,16 +126,16 @@ def run_SLAM(config, plot=False, seed=None):
             )
 
         cuda_modules["update"].get_function("update")(
-            memory.particles, np.int32(config.N//config.THREADS),
+            memory.particles,
             memory.scratchpad, np.int32(memory.scratchpad_block_size),
             memory.measurements,
             np.int32(config.N), np.int32(len(visible_measurements)),
             memory.cov, np.float64(config.THRESHOLD),
             np.float64(config.sensor.RANGE), np.float64(config.sensor.FOV),
             np.int32(config.MAX_LANDMARKS),
-            np.float64(config.CONTROL_VARIANCE[0] ** 0.5), np.float64(config.CONTROL_VARIANCE[1] ** 0.5),
+            np.float64(config.CONTROL[i, 0]), np.float64(config.CONTROL[i, 1]),
             np.float64(config.DT),
-            block=(config.THREADS, 1, 1)
+            block=(32, 1, 1), grid=(config.N//32, 1, 1)
         )
         
         rescale(cuda_modules, config, memory)

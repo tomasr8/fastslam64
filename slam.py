@@ -45,7 +45,7 @@ def relative_error(ground, predicted):
 
 
 
-EXPORT = True
+EXPORT = False
 
 if EXPORT:
     matplotlib.use("pgf")
@@ -61,21 +61,42 @@ if EXPORT:
 #     data = json.load(f)
 # with open("figs_utias/2_data_3_1_8192_1.3_0.18-0.0024_0.0195-0.01_5.json") as f:
 #     data = json.load(f)
-with open("figs_utias/2_data_3_1_16_1.3_0.18-0.0024_0.0195-0.01_16.json") as f:
+# with open("figs_utias/2_data_3_1_16_1.3_0.18-0.0024_0.0195-0.01_16.json") as f:
+#     data = json.load(f)
+with open("figs_fsonline/fixed_data_1024_3.25_19.json") as f:
     data = json.load(f)
-
 
 fig, ax = plt.subplots()
 
-fig.set_size_inches(w=5.02, h=5.5)
-fig.subplots_adjust(left=0.01, right=0.99, bottom=0.12, top=0.99)
+fig.set_size_inches(w=5.02, h=4.5)
+fig.subplots_adjust(left=0.01, right=0.99, bottom=0.13, top=0.99)
 
-ground = np.array(data["ground"])[::50]
-predicted = np.array(data["predicted"])[::50]
+# ground = np.array(data["ground"])[::50]
+# predicted = np.array(data["predicted"])[::50]
+ground = np.array(data["ground"])
+predicted = np.array(data["predicted"])
 # dr = np.array(data["dead_reckoning"])
-landmarks = np.array(data["landmarks"])
+# landmarks = np.array(data["landmarks"])
+landmarks = np.load("fsonline/track.npy")
+
+
 estimated_landmarks = np.array(data["map"])
 covariance = np.array(data["map_covariance"])
+
+estimated_landmarks = estimated_landmarks[estimated_landmarks[:, 0] > -150]
+estimated_landmarks = estimated_landmarks[estimated_landmarks[:, 0] < 4]
+estimated_landmarks = estimated_landmarks[estimated_landmarks[:, 1] > -30]
+estimated_landmarks = estimated_landmarks[estimated_landmarks[:, 1] < 45]
+
+estimated_landmarks = estimated_landmarks[
+    (estimated_landmarks[:, 0] < -75) | (estimated_landmarks[:, 0] > -65) | (estimated_landmarks[:, 1] < 6) | (estimated_landmarks[:, 1] > 12)
+]
+
+estimated_landmarks = estimated_landmarks[
+    (estimated_landmarks[:, 0] < -10) | (estimated_landmarks[:, 0] > -8) | (estimated_landmarks[:, 1] < 10) | (estimated_landmarks[:, 1] > 12)
+]
+
+
 
 # plot_history(ax, ground[::50], color='green', linewidth=1, label="Robot path")
 # plot_history(ax, dr[::50], color='purple', linewidth=1, style="--", label="Dead reckoning")
@@ -83,8 +104,8 @@ covariance = np.array(data["map_covariance"])
 
 plot_history(ax, ground, color='green', linewidth=1, label="Robot path")
 plot_history(ax, predicted, color='orange', linewidth=1, label="Estimated path")
-plot_landmarks(ax, landmarks, color="blue", zorder=104, label="Landmarks")
-plot_landmarks(ax, estimated_landmarks, color="orange", zorder=104, label="Estimated landmarks")
+plot_landmarks(ax, landmarks, color="blue", zorder=104, label="Landmarks", s=4)
+plot_landmarks(ax, estimated_landmarks, color="orange", zorder=104, label="Estimated landmarks", s=3)
 
 # for i, landmark in enumerate(estimated_landmarks):
 #     plot_confidence_ellipse(ax, landmark, covariance[i], n_std=3, zorder=105)

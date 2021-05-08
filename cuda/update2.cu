@@ -240,7 +240,7 @@ __device__ void pinv(double *A, double *B)
     B[3] = scalar * a;
 }
 
-__device__ void inv3(double **A, double **B)
+__device__ void inv3(double A[][3], double B[][3])
 {
     double a = A[0][0];
     double b = A[0][1];
@@ -265,20 +265,22 @@ __device__ void inv3(double **A, double **B)
     B[2][2] = (a*e - b*d)/det;
 }
 
-__device__ void matmul_mn(int m, int n, int p, double A[][n], double B[][p], double C[][p])
+__device__ void matmul_mn(int m, int n, int p, double *A, double *B, double *C)
 {
     for(int i = 0; i < m; i++) {
         for(int j = 0; j < p; j++) {
             for(int k = 0; k < n; k++) {
-                C[i][j] += A[i][k] * B[k][j];
+                double prod = (*((A + i*n) + k)) * (*((B + k*p) + j));
+                *((C +i*p) + j) += prod;
+                // C[i][j] += A[i][k] * B[k][j];
             }
         }
     }
 }
 
 __device__ void get_new_state(
-    double *state_mean, double **state_sigma, double *S_inv_1d, double **Hx, double **Hxt, double *measurement, double*measurement_predicted,
-    double *new_state_mean, double **new_state_sigma
+    double *state_mean, double state_sigma[][3], double *S_inv_1d, double Hx[][3], double Hxt[][2], double *measurement, double*measurement_predicted,
+    double *new_state_mean, double new_state_sigma[][3]
 )
 {
     double S_inv[2][2] = {
@@ -286,13 +288,32 @@ __device__ void get_new_state(
         {S_inv_1d[2], S_inv_1d[3]}
     };
 
+    // printf("Hxt\n");
+    // printf("[%lf, %lf]\n", Hxt[0][0], Hxt[0][1]);
+    // printf("[%lf, %lf]\n", Hxt[1][0], Hxt[1][1]);
+    // printf("[%lf, %lf]\n", Hxt[2][0], Hxt[2][1]);
+
+
+    // printf("S_inv\n");
+    // printf("[%lf, %lf]\n", S_inv[0][0], S_inv[0][1]);
+    // printf("[%lf, %lf]\n", S_inv[1][0], S_inv[1][1]);
+
+    // printf("Hx\n");
+    // printf("[%lf, %lf, %lf]\n", Hx[0][0], Hx[0][1], Hx[0][2]);
+    // printf("[%lf, %lf, %lf]\n", Hx[1][0], Hx[1][1], Hx[1][2]);
+
     double HxtSinv[3][2] = {
         {0, 0},
         {0, 0},
         {0, 0}
     };
 
-    matmul_mn(3, 2, 2, Hxt, S_inv, HxtSinv);
+    
+    matmul_mn(3, 2, 2, (double*)Hxt, (double*)S_inv, (double*)HxtSinv);
+    // printf("HxtSinv\n");
+    // printf("[%lf, %lf]\n", HxtSinv[0][0], HxtSinv[0][1]);
+    // printf("[%lf, %lf]\n", HxtSinv[1][0], HxtSinv[1][1]);
+    // printf("[%lf, %lf]\n", HxtSinv[2][0], HxtSinv[2][1]);
 
     double HxtSinvHx[3][3] = {
         {0, 0, 0},
@@ -300,7 +321,12 @@ __device__ void get_new_state(
         {0, 0, 0}
     };
 
-    matmul_mn(3, 2, 3, HxtSinv, Hx, HxtSinvHx);
+    matmul_mn(3, 2, 3, (double*)HxtSinv, (double*)Hx, (double*)HxtSinvHx);
+
+    // printf("HxtSinvHx\n");
+    // printf("[%lf, %lf, %lf]\n", HxtSinvHx[0][0], HxtSinvHx[0][1], HxtSinvHx[0][2]);
+    // printf("[%lf, %lf, %lf]\n", HxtSinvHx[1][0], HxtSinvHx[1][1], HxtSinvHx[1][2]);
+    // printf("[%lf, %lf, %lf]\n", HxtSinvHx[2][0], HxtSinvHx[2][1], HxtSinvHx[2][2]);
 
     double state_sigma_inv[3][3] = {
         {0, 0, 0},
@@ -309,6 +335,11 @@ __device__ void get_new_state(
     };
 
     inv3(state_sigma, state_sigma_inv);
+
+    // printf("state_sigma_inv\n");
+    // printf("[%lf, %lf, %lf]\n", state_sigma_inv[0][0], state_sigma_inv[0][1], state_sigma_inv[0][2]);
+    // printf("[%lf, %lf, %lf]\n", state_sigma_inv[1][0], state_sigma_inv[1][1], state_sigma_inv[1][2]);
+    // printf("[%lf, %lf, %lf]\n", state_sigma_inv[2][0], state_sigma_inv[2][1], state_sigma_inv[2][2]);
 
     state_sigma_inv[0][0] += HxtSinvHx[0][0];
     state_sigma_inv[0][1] += HxtSinvHx[0][1];
@@ -328,31 +359,53 @@ __device__ void get_new_state(
 
     inv3(state_sigma_inv, new_state_sigma);
 
+    // printf("new_state_sigma\n");
+    // printf("[%lf, %lf, %lf]\n", new_state_sigma[0][0], new_state_sigma[0][1], new_state_sigma[0][2]);
+    // printf("[%lf, %lf, %lf]\n", new_state_sigma[1][0], new_state_sigma[1][1], new_state_sigma[1][2]);
+    // printf("[%lf, %lf, %lf]\n", new_state_sigma[2][0], new_state_sigma[2][1], new_state_sigma[2][2]);
+
+    // printf("HxtSinv\n");
+    // printf("[%lf, %lf]\n", HxtSinv[0][0], HxtSinv[0][1]);
+    // printf("[%lf, %lf]\n", HxtSinv[1][0], HxtSinv[1][1]);
+    // printf("[%lf, %lf]\n", HxtSinv[2][0], HxtSinv[2][1]);
+
     double new_sigma_HxtSinv[3][2] = {
         {0, 0},
         {0, 0},
         {0, 0}
     };
 
-    matmul_mn(3, 2, 2, new_state_sigma, HxtSinv, new_sigma_HxtSinv);
+    matmul_mn(3, 3, 2, (double*)new_state_sigma, (double*)HxtSinv, (double*)new_sigma_HxtSinv);
     double dz[2] = { measurement[0] - measurement_predicted[0], mod_angle(measurement[1] - measurement_predicted[1]) };
 
-    // double new_state_mean[] = { state_mean[0], state_mean[1], state_mean[2] };
+    // printf("dz [%lf, %lf]\n", dz[0], dz[1]);
+    // printf("new_sigma_HxtSinv\n");
+    // printf("[%lf, %lf]\n", new_sigma_HxtSinv[0][0], new_sigma_HxtSinv[0][1]);
+    // printf("[%lf, %lf]\n", new_sigma_HxtSinv[1][0], new_sigma_HxtSinv[1][1]);
+    // printf("[%lf, %lf]\n", new_sigma_HxtSinv[2][0], new_sigma_HxtSinv[2][1]);
 
-    new_state_mean[0] += (new_sigma_HxtSinv[0][0]*dz[0] + new_sigma_HxtSinv[0][1]*dz[1]);
-    new_state_mean[1] += (new_sigma_HxtSinv[1][0]*dz[0] + new_sigma_HxtSinv[1][1]*dz[1]);
-    new_state_mean[2] += (new_sigma_HxtSinv[2][0]*dz[0] + new_sigma_HxtSinv[2][1]*dz[1]);
+
+    // double new_state_mean[] = { state_mean[0], state_mean[1], state_mean[2] };
+    // printf("diff: [%lf, %lf, %lf]\n",
+    //     (new_sigma_HxtSinv[0][0]*dz[0] + new_sigma_HxtSinv[0][1]*dz[1]),
+    //     (new_sigma_HxtSinv[1][0]*dz[0] + new_sigma_HxtSinv[1][1]*dz[1]),
+    //     (new_sigma_HxtSinv[2][0]*dz[0] + new_sigma_HxtSinv[2][1]*dz[1])
+    // );
+
+    new_state_mean[0] = state_mean[0] + (new_sigma_HxtSinv[0][0]*dz[0] + new_sigma_HxtSinv[0][1]*dz[1]);
+    new_state_mean[1] = state_mean[1] + (new_sigma_HxtSinv[1][0]*dz[0] + new_sigma_HxtSinv[1][1]*dz[1]);
+    new_state_mean[2] = state_mean[2] + (new_sigma_HxtSinv[2][0]*dz[0] + new_sigma_HxtSinv[2][1]*dz[1]);
     new_state_mean[2] = mod_angle(new_state_mean[2]);
 }
 
-__device__ void add_motion_fix(double **Hx, double **Hxt, double **Q, double **HxQHxt)  {
+__device__ void add_motion_fix(double Hx[][3], double Hxt[][2], double Q[][3], double HxQHxt[][2])  {
     double HxQ[2][3] = {
         {0, 0, 0},
         {0, 0, 0}
     };
 
-    matmul_mn(2, 3, 3, Hx, Q, HxQ);
-    matmul_mn(2, 3, 2, HxQ, Hxt, HxQHxt);
+    matmul_mn(2, 3, 3, (double*)Hx, (double*)Q, (double*)HxQ);
+    matmul_mn(2, 3, 2, (double*)HxQ, (double*)Hxt, (double*)HxQHxt);
 }
 
 __device__ double pdf(double *x, double *mean, double* cov)
@@ -383,13 +436,7 @@ __device__ void add_measurement_as_landmark(double *particle, double *measuremen
         -(landmark[1] - pos[1])/q, (landmark[0] - pos[0])/q
     };
 
-    // printf("m %f %f \n", measurement[0], measurement[1]);
-    // printf("lm %f %f \n", landmark[0], landmark[1]);
-    // printf("R %f %f %f %f \n", measurement_cov[0], measurement_cov[1], measurement_cov[2], measurement_cov[3]);
-    // printf("H [%f, %f, %f, %f] \n", H[0], H[1], H[2], H[3]);
-
     pinv(H, H);
-    // printf("Hinv %f %f %f %f \n", H[0], H[1], H[2], H[3]);
 
     double H_inv_t[] = {
         H[0], H[2],
@@ -401,13 +448,7 @@ __device__ void add_measurement_as_landmark(double *particle, double *measuremen
     };
 
     matmul(H, measurement_cov, S);
-    // printf("S1 %f %f %f %f \n", S[0], S[1], S[2], S[3]);
     matmul(S, H_inv_t, S);
-    // printf("S [%f, %f, %f, %f] \n", S[0], S[1], S[2], S[3]);
-
-    // printf("pos[%f, %f, %f], m[%f, %f]\n", particle[0], particle[1], particle[2], measurement[0], measurement[1]);
-    // printf("adding landmark [%f, %f] [%f, %f, %f, %f]\n", landmark[0], landmark[1], S[0], S[1], S[2], S[3]);
-    // printf("=\n");
 
     add_landmark(particle, landmark, S);
 }
@@ -478,8 +519,12 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
 
     
     double state_mean[] = { particle[0], particle[1], particle[2] };
-    double P[3][3] = { {0.1, 0, 0}, {0, 0.1, 0}, {0, 0, 0.05} };
-    double state_sigma[3][3] = { {0.1, 0, 0}, {0, 0.1, 0}, {0, 0, 0.05} };
+    double P[3][3] = { {0.001, 0, 0}, {0, 0.001, 0}, {0, 0, 0.0005} };
+    double state_sigma[3][3] = { {0.001, 0, 0}, {0, 0.001, 0}, {0, 0, 0.0005} };
+
+    if(id == 0) {
+        printf("Initial mean [%lf, %lf, %lf]\n", state_mean[0], state_mean[1], state_mean[2]);
+    }
 
     for(int i = 0; i < n_measurements; i++) {
         double best = 1000000.0;
@@ -582,9 +627,13 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
                 new_state_mean, new_state_sigma
             );
 
+            // printf("Old state: [%lf %lf %lf]\n", state_mean[0], state_mean[1], state_mean[2]);
             state_mean[0] = new_state_mean[0];
             state_mean[1] = new_state_mean[1];
             state_mean[2] = new_state_mean[2];
+            // printf("New state: [%lf %lf %lf]\n", state_mean[0], state_mean[1], state_mean[2]);
+            // printf("===============\n");
+
 
             state_sigma[0][0] = new_state_sigma[0][0];
             state_sigma[0][1] = new_state_sigma[0][1];
@@ -600,6 +649,11 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
             particle[1] = state_mean[1];
             particle[2] = state_mean[2];
 
+            if(id == 0) {
+                printf("Temp mean [%lf, %lf, %lf]\n", state_mean[0], state_mean[1], state_mean[2]);
+                printf("=========\n");
+            }
+
             double HxSHxt[2][2] = {
                 {0, 0},
                 {0, 0}
@@ -611,8 +665,6 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
             S[3] += HxSHxt[1][1];
 
             particle[3] *= pdf(measurements->measurements[i], measurement_predicted, S);
-            // particle[3] *= 2.0;
-            // particle[3] += 1e-38;
 
             increment_landmark_prob(particle, best_idx);
 
@@ -621,16 +673,17 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
         }
     }
 
-    // for(int i = n_in_range - 1; i > 0; i--) {
-    //     int idx = in_range[i];
-    //     if(n_matches[idx] == 0) {
-    //         decrement_landmark_prob(particle, idx);
-    //         double prob = get_landmark_prob(particle, idx)[0];
-    //         if(prob < 0) {
-    //             remove_landmark(particle, idx);
-    //         }
-    //     } 
-    // }
+    if(id == 0) {
+        printf("Final mean [%lf, %lf, %lf]\n", state_mean[0], state_mean[1], state_mean[2]);
+        // printf("[%lf, %lf, %lf]\n", state_sigma[0][0], state_sigma[0][1], state_sigma[0][2]);
+        // printf("[%lf, %lf, %lf]\n", state_sigma[1][0], state_sigma[1][1], state_sigma[1][2]);
+        // printf("[%lf, %lf, %lf]\n", state_sigma[2][0], state_sigma[2][1], state_sigma[2][2]);
+        printf("=========\n");
+    }
+
+    particle[0] = state_mean[0] + sqrt(state_sigma[0][0]) * curand_normal(states[id]);
+    particle[1] = state_mean[1] + sqrt(state_sigma[1][1]) * curand_normal(states[id]);
+    particle[2] = mod_angle(state_mean[2] + sqrt(state_sigma[2][2]) * curand_normal(states[id]));
 }
 
 __global__ void update(

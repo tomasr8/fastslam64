@@ -14,7 +14,8 @@ class CUDAMemory:
     def __init__(self, config):
         self.particles = cuda.mem_alloc(DOUBLE * config.N * config.PARTICLE_SIZE)
 
-        self.scratchpad_block_size = 2 * config.THREADS * config.MAX_LANDMARKS
+        self.scratchpad_block_size = 2 * config.N * config.MAX_LANDMARKS
+        # self.scratchpad_block_size = 2 * config.THREADS * config.MAX_LANDMARKS
         self.scratchpad = cuda.mem_alloc(DOUBLE * self.scratchpad_block_size)
 
         self.measurements = cuda.mem_alloc(DOUBLE * 2 * config.sensor.MAX_MEASUREMENTS)
