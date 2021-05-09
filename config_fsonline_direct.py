@@ -74,9 +74,9 @@ xavier_odom = np.load("fsonline/odom/fixed_odom.npy")
 
 config = {
     "SEED": 9,
-    "N": 256, # number of particles
+    "N": 1024, # number of particles
     "DT": 1.0,
-    "THREADS": 256, # number threads in a block
+    "THREADS": 512, # number threads in a block
     "GPU_HEAP_SIZE_BYTES": 2 * 100000 * 1024, # available GPU heap size
     "THRESHOLD": 3.25,
     "sensor": {

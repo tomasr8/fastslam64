@@ -124,8 +124,10 @@ def run_mse():
         # for filename in os.listdir('figs_fsonline'):
         #     if filename.startswith(f"1_data_{N}_") and filename.endswith(".json"):
         #         with open(f"figs_fsonline/{filename}") as f:
+        # for filename in os.listdir('figs_fsonline'):
+        #     if filename.startswith(f"fixed_data_{N}_") and filename.endswith(".json"):
         for filename in os.listdir('figs_fsonline'):
-            if filename.startswith(f"fixed_data_{N}_") and filename.endswith(".json"):
+            if filename.startswith(f"fixed_data_known_{N}_") and filename.endswith(".json"):
                 with open(f"figs_fsonline/{filename}") as f:
                     data = json.load(f)
                     t, r = mse(data["ground"], data["predicted"])

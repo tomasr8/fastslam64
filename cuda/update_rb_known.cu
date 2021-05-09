@@ -305,6 +305,8 @@ __global__ void update(
     double *measurement_cov, int max_landmarks)
 {
 
+    // printf("n measurements! %d\n", n_measurements);
+    
     if(n_measurements == 0) {
         return;
     }
@@ -326,8 +328,15 @@ __global__ void update(
         
         double *particle = get_particle(particles, particle_id);
         int n_landmarks = get_n_landmarks(particle);
+
+        if(particle_id == 0) {
+            printf("n landmarks: %d\n", n_landmarks);
+        }
     
         if(n_landmarks == 0) {
+            if(particle_id == 0) {
+                printf("Adding landmarks\n");
+            }
             add_measurements_as_landmarks(particle, &measurements);
             continue;
         }
