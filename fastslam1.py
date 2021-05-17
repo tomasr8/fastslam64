@@ -12,30 +12,65 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 
+def pi_2_pi(angle):
+    return (angle + math.pi) % (2 * math.pi) - math.pi
+
+def process(data):
+    odom = []
+    measurements = []
+
+    for i in range(len(data)):
+        x, y, theta = data[i]["true_odom"]
+        theta = pi_2_pi(theta)
+        odom.append([x, y, theta])
+
+        measurements.append(data[i]["measurements"])
+
+    return np.array(odom), measurements
+
 np.random.seed(0)
 
 # Fast SLAM covariance
-Q = 8 * (np.diag([0.15, np.deg2rad(1.0)]) ** 2)
-R = np.diag([0.15, np.deg2rad(5.0)]) ** 2
+Q = (np.diag([0.2, np.deg2rad(15.0)]) ** 2)
+R = np.diag([0.1, 0.1, 0.01])
+# R = np.diag([0.15, np.deg2rad(5.0)]) ** 2
+
 
 #  Simulation parameter
 Q_sim = np.diag([0.15, np.deg2rad(1.0)]) ** 2
 R_sim = np.diag([0.15, np.deg2rad(5.0)]) ** 2
 OFFSET_YAW_RATE_NOISE = 0.00
 
-CONTROL = np.load("circle/control.npy")
+XAVIER_ODOM = np.load("fsonline/odom/fixed_odom.npy")
+with open("fsonline/odom/data_known.json") as f:
+    data = json.load(f)
+
+TRUE_ODOM, MEASUREMENTS = process(data)
 
 DT = 1.0 # time tick [s]
-SIM_TIME = len(CONTROL) - 1  # simulation time [s]
+SIM_TIME = len(XAVIER_ODOM) - 1  # simulation time [s]
 MAX_RANGE = 4.0  # maximum observation range
 M_DIST_TH = 2.0  # Threshold of Mahalanobis distance for data association.
 STATE_SIZE = 3  # State size [x,y,yaw]
 LM_SIZE = 2  # LM state size [x,y]
-N_PARTICLE = 128  # number of particle
+N_PARTICLE = 4  # number of particle
 NTH = N_PARTICLE / 1.5  # Number of particle for re-sampling
 
-show_animation = False
+show_animation = True
 
+
+def wrap_angle(angle):
+    return np.arctan2(np.sin(angle), np.cos(angle))
+
+def xy2rb(pose, landmark):
+    position = pose[:2]
+    vector_to_landmark = np.array(landmark - position, dtype=np.float64)
+
+    r = np.linalg.norm(vector_to_landmark)
+    b = np.arctan2(vector_to_landmark[1], vector_to_landmark[0]) - pose[2]
+    b = wrap_angle(b)
+
+    return r, b
 
 class Particle:
 
@@ -50,8 +85,8 @@ class Particle:
         self.lmP = np.zeros((n_landmark * LM_SIZE, LM_SIZE))
 
 
-def fast_slam1(particles, u, z):
-    particles = predict_particles(particles, u)
+def fast_slam1(particles, odom, z):
+    particles = predict_particles(particles, odom)
 
     particles = update_with_observation(particles, z)
 
@@ -91,17 +126,21 @@ def calc_final_state(particles):
     return xEst
 
 
-def predict_particles(particles, u):
+def predict_particles(particles, odom):
     for i in range(N_PARTICLE):
-        px = np.zeros((STATE_SIZE, 1))
-        px[0, 0] = particles[i].x
-        px[1, 0] = particles[i].y
-        px[2, 0] = particles[i].yaw
-        ud = u + (np.random.randn(1, 2) @ R ** 0.5).T  # add noise
-        px = motion_model(px, ud)
-        particles[i].x = px[0, 0]
-        particles[i].y = px[1, 0]
-        particles[i].yaw = px[2, 0]
+        particles[i].x = odom[0] + np.random.normal(0, R[0, 0]**0.5)
+        particles[i].y = odom[1] + np.random.normal(0, R[1, 1]**0.5)
+        particles[i].yaw = odom[2] + np.random.normal(0, R[2, 2]**0.5)
+
+        # px = np.zeros((STATE_SIZE, 1))
+        # px[0, 0] = particles[i].x
+        # px[1, 0] = particles[i].y
+        # px[2, 0] = particles[i].yaw
+        # ud = u + (np.random.randn(1, 2) @ R ** 0.5).T  # add noise
+        # px = motion_model(px, ud)
+        # particles[i].x = px[0, 0]
+        # particles[i].y = px[1, 0]
+        # particles[i].yaw = px[2, 0]
 
     return particles
 
@@ -279,7 +318,7 @@ def calc_input(time):
     return u
 
 
-def observation(xTrue, xd, u, rfid):
+def observation(xTrue, odom, rfid):
     # calc true state
     xTrue = motion_model(xTrue, u)
 
@@ -345,7 +384,7 @@ def main():
     #                  [-10.0, 15.0]
     #                  ])
 
-    RFID = np.load("circle/landmarks.npy")                 
+    RFID = np.load("fsonline/track.npy")                 
     n_landmark = RFID.shape[0]
     # CONTROL = np.load("square/control.npy")
 
@@ -354,14 +393,14 @@ def main():
     # xTrue = np.zeros((STATE_SIZE, 1))  # True state
     # xDR = np.zeros((STATE_SIZE, 1))  # Dead reckoning
 
-    xEst = np.array([2.0, 6, 0]).reshape(3, 1)  # SLAM estimation
-    xTrue = np.array([2.0, 6, 0]).reshape(3, 1)  # True state
-    xDR = np.array([2.0, 6, 0]).reshape(3, 1)  # Dead reckoning
+    xEst = TRUE_ODOM[0].copy().reshape(3, 1)  # SLAM estimation
+    xTrue = TRUE_ODOM[0].copy().reshape(3, 1)  # True state
+    # xDR = np.array([2.0, 6, 0]).reshape(3, 1)  # Dead reckoning
 
     # history
     hxEst = xEst
     hxTrue = xTrue
-    hxDR = xTrue
+    # hxDR = xTrue
 
     particles = [Particle(n_landmark) for _ in range(N_PARTICLE)]
 
@@ -374,13 +413,24 @@ def main():
         # print(time)
         # u = calc_input(time)
         # u = np.array([1.0, 0]).reshape(2, 1)
-        u = (1/DT) * CONTROL[ii, [1, 0]].reshape((2, 1))
+        # u = (1/DT) * CONTROL[ii, [1, 0]].reshape((2, 1))
+        xTrue = np.copy(TRUE_ODOM[ii])
+        odom = np.copy(XAVIER_ODOM[ii])
         # print(u)
-        ii += 1
 
-        xTrue, z, xDR, ud = observation(xTrue, xDR, u, RFID)
+        ms = MEASUREMENTS[ii]
+        visible_measurements = []
+        for m in ms:
+            x, y, j = m
+            r, b = xy2rb(xTrue, [x, y])
+            visible_measurements.append([r, b, j])
+            
+        z = np.array(visible_measurements, dtype=np.float64).T
 
-        particles = fast_slam1(particles, ud, z)
+
+        # xTrue, z, xDR, ud = observation(xTrue, odom, RFID)
+
+        particles = fast_slam1(particles, odom, z)
 
         xEst = calc_final_state(particles)
 
@@ -388,8 +438,9 @@ def main():
 
         # store data history
         hxEst = np.hstack((hxEst, x_state))
-        hxDR = np.hstack((hxDR, xDR))
-        hxTrue = np.hstack((hxTrue, xTrue))
+        # hxDR = np.hstack((hxDR, xDR))
+        hxTrue = np.hstack((hxTrue, xTrue.reshape(3, 1)))
+        ii += 1
 
         if show_animation:  # pragma: no cover
             plt.cla()
@@ -404,12 +455,12 @@ def main():
                 plt.plot(particles[i].lm[:, 0], particles[i].lm[:, 1], "xb")
 
             plt.plot(hxTrue[0, :], hxTrue[1, :], "-b")
-            plt.plot(hxDR[0, :], hxDR[1, :], "-k")
+            # plt.plot(hxDR[0, :], hxDR[1, :], "-k")
             plt.plot(hxEst[0, :], hxEst[1, :], "-r")
             plt.plot(xEst[0], xEst[1], "xk")
             plt.axis("equal")
             plt.grid(True)
-            plt.pause(0.001)
+            plt.pause(3)
 
         # if ii == 2000:
         #     plt.plot(RFID[:, 0], RFID[:, 1], "*k")
@@ -433,7 +484,7 @@ def main():
 
         times.append(tm.time() -  start_time)
 
-    print(1/np.mean(times), 1000 * np.std(times))
+    print(np.mean(times), np.std(times))
     return hxTrue, hxEst
 
 
@@ -446,7 +497,7 @@ def mse(ground, predicted):
 
     for g, p in zip(ground, predicted):
         mse_trans += (g[0]-p[0])**2 + (g[1]-p[1])**2
-        mse_rot += (g[2]-p[2])**2
+        mse_rot += wrap_angle(g[2]-p[2])**2
 
     N = len(ground)
 
@@ -454,23 +505,25 @@ def mse(ground, predicted):
 
 
 if __name__ == '__main__':
-    mse_trans = []
-    mse_rot = []
+    hxTrue, hxEst = main()
 
-    for i in range(10):
-        print(i)
+    # mse_trans = []
+    # mse_rot = []
 
-        hxTrue, hxEst = main()
-        with open(f"figs_pr/1_data_{N_PARTICLE}_{i}.json", "w") as f:
-            data = {
-                "ground": hxTrue.T.tolist(),
-                "predicted": hxEst.T.tolist(),
-            }
-            json.dump(data, f)
+    # for i in range(10):
+    #     print(i)
 
-        t, r = mse(hxTrue, hxEst)
-        mse_trans.append(t)
-        mse_rot.append(r)
+    #     hxTrue, hxEst = main()
+    #     with open(f"figs_pr/fsonline_data_{N_PARTICLE}_{i}.json", "w") as f:
+    #         data = {
+    #             "ground": hxTrue.T.tolist(),
+    #             "predicted": hxEst.T.tolist(),
+    #         }
+    #         json.dump(data, f)
 
-    print(np.mean(mse_trans), np.std(mse_trans))
-    print(np.mean(mse_rot), np.std(mse_rot))
+    #     t, r = mse(hxTrue, hxEst)
+    #     mse_trans.append(t)
+    #     mse_rot.append(r)
+
+    # print(np.mean(mse_trans), np.std(mse_trans))
+    # print(np.mean(mse_rot), np.std(mse_rot))

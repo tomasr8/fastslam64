@@ -1,6 +1,5 @@
 import json
 import numpy as np
-from numpy.testing._private.utils import measure
 from utils import dotify
 import math
 
@@ -26,14 +25,22 @@ with open("fsonline/odom/data_known.json") as f:
 
 true_odom, measurements = process(data)
 
+# s = set()
+# for ms in measurements:
+#     for _, _, j in ms:
+#         s.add(j)
+
+
+# print(s)
+
 xavier_odom = np.load("fsonline/odom/fixed_odom.npy")
 
 config = {
-    "SEED": 9,
-    "N": 256, # number of particles
+    "SEED": 2,
+    "N": 4, # number of particles
     "DT": 1.0,
-    "THREADS": 256, # number threads in a block
-    "GPU_HEAP_SIZE_BYTES": 100000 * 1024, # available GPU heap size
+    "THREADS": 4, # number threads in a block
+    "GPU_HEAP_SIZE_BYTES": 2 * 100000 * 1024, # available GPU heap size
     "THRESHOLD": 3.25,
     "sensor": {
         "RANGE": 30,

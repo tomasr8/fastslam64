@@ -225,4 +225,4 @@ def run_SLAM(config, plot=False, seed=None):
 if __name__ == "__main__":
     from config_fsonline_direct import config
     context.set_limit(limit.MALLOC_HEAP_SIZE, config.GPU_HEAP_SIZE_BYTES)
-    run_SLAM(config, plot=True)
+    run_SLAM(config, plot=False)

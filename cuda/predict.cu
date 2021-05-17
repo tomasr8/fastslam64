@@ -44,6 +44,7 @@ __global__ void predict_from_imu(double *particles,
     particle[0] = x + sigma_x * curand_normal(states[i]);
     particle[1] = y + sigma_y * curand_normal(states[i]);
     particle[2] = theta + sigma_theta * curand_normal(states[i]);
+    particle[2] = atan2(sin(particle[2]), cos(particle[2]));
 }
 
 // Moves particles based on the control input and movement model.

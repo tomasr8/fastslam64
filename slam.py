@@ -45,7 +45,7 @@ def relative_error(ground, predicted):
 
 
 
-EXPORT = False
+EXPORT = True
 
 if EXPORT:
     matplotlib.use("pgf")
@@ -68,8 +68,8 @@ with open("figs_fsonline/fixed_data_1024_3.25_19.json") as f:
 
 fig, ax = plt.subplots()
 
-fig.set_size_inches(w=5.02, h=4.5)
-fig.subplots_adjust(left=0.01, right=0.99, bottom=0.13, top=0.99)
+fig.set_size_inches(w=5.02, h=4.3)
+fig.subplots_adjust(left=0.01, right=0.99, bottom=0.15, top=0.99)
 
 # ground = np.array(data["ground"])[::50]
 # predicted = np.array(data["predicted"])[::50]
@@ -103,8 +103,8 @@ estimated_landmarks = estimated_landmarks[
 # plot_landmarks(ax, landmarks, color="blue", zorder=104, label="Landmarks")
 
 plot_history(ax, ground, color='green', linewidth=1, label="Robot path")
-plot_history(ax, predicted, color='orange', linewidth=1, label="Estimated path")
-plot_landmarks(ax, landmarks, color="blue", zorder=104, label="Landmarks", s=4)
+plot_history(ax, predicted, color='orange', style="--", linewidth=1, label="Estimated path")
+plot_landmarks(ax, landmarks, color="blue", zorder=104, label="Landmarks", s=8)
 plot_landmarks(ax, estimated_landmarks, color="orange", zorder=104, label="Estimated landmarks", s=3)
 
 # for i, landmark in enumerate(estimated_landmarks):
@@ -123,6 +123,6 @@ print(relative_error(ground, predicted))
 
 
 if EXPORT:
-    plt.savefig('utias_vis_est_divergence.pgf')
+    plt.savefig('fsonline_vis_est.pgf')
 else:
     plt.show()

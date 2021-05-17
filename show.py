@@ -5,7 +5,7 @@ import scipy.stats
 import matplotlib
 import matplotlib.pyplot as plt
 
-EXPORT = False
+EXPORT = True
 
 if EXPORT:
     matplotlib.use("pgf")
@@ -17,8 +17,8 @@ if EXPORT:
     })
 
 fig, ax = plt.subplots()
-fig.set_size_inches(w=5.02, h=4)
-fig.subplots_adjust(left=0.12, right=0.99, bottom=0.14, top=0.99)
+fig.set_size_inches(w=5.02, h=4.5)
+fig.subplots_adjust(left=0.14, right=0.99, bottom=0.16, top=0.99)
 
 # UTIAS
 # =====================================================
@@ -40,19 +40,32 @@ fig.subplots_adjust(left=0.12, right=0.99, bottom=0.14, top=0.99)
 
 # plt.xticks(ticks=np.arange(12), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192], rotation = 45)
 # ax.set_ylabel("MSE(trans)")
+# ax.set_xlabel("Number of particles")
 # plt.legend()
 # =====================================================
 
 
 # FS ONLINE
 # =====================================================
-error = [0.18, 0.16, 0.12, 0.11, 0.10, 0.09, 0.06, 0.05, 0.05]
-yerr = [0.01, 0.02, 0.02, 0.03, 0.02, 0.01, 0.01, 0.01, 0.00]
-ax.errorbar(np.arange(9), error, yerr=yerr, capsize=5, label="Unknown correspondence")
+# # unknown
+# error = [0.18, 0.16, 0.12, 0.11, 0.10, 0.09, 0.06, 0.05, 0.05]
+# yerr = [0.01, 0.02, 0.02, 0.03, 0.02, 0.01, 0.01, 0.01, 0.00]
+# ax.errorbar(np.arange(9), error, yerr=yerr, capsize=5, label="Unknown correspondence", alpha=.9)
 
-plt.xticks(ticks=np.arange(9), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024], rotation = 45)
-ax.set_ylabel("MSE(trans)")
-plt.legend()
+# # known
+# error = [0.15, 0.13, 0.12, 0.09, 0.09, 0.06, 0.05, 0.05, 0.05]
+# yerr = [0.01, 0.02, 0.02, 0.02, 0.03, 0.01, 0.01, 0.00, 0.00]
+# ax.errorbar(np.arange(9), error, yerr=yerr, capsize=5, label="Known correspondence", alpha=.9)
+
+# # PR known
+# # error = [0.12, 0.09, 0.07, 0.06, 0.06, 0.05]
+# # yerr = [0.00, 0.00, 0.00, 0.00, 0.00, 0.00]
+# # ax.errorbar(np.arange(6), error, yerr=yerr, capsize=5, label="Python Robotics", alpha=.9)
+
+# plt.xticks(ticks=np.arange(9), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024], rotation = 45)
+# ax.set_ylabel("MSE(trans)")
+# ax.set_xlabel("Number of particles")
+# plt.legend()
 # =====================================================
 
 
@@ -79,6 +92,8 @@ plt.legend()
 # ax.errorbar(np.arange(6), error, yerr=yerr, capsize=5, label="Python Robotics (known correspondence)")
 # plt.xticks(ticks=np.arange(9), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024])
 # ax.set_ylabel("MSE(trans)")
+# ax.set_xlabel("Number of particles")
+
 # plt.legend()
 # =====================================================
 
@@ -126,6 +141,7 @@ plt.legend()
 
 # plt.xticks(ticks=[4, 16, 32, 64, 128, 256], rotation=45)
 # ax.set_ylabel("Time (s)")
+# ax.set_xlabel("Number of simultaneous measurements")
 # plt.legend()
 # ================================================
 
@@ -164,38 +180,82 @@ plt.legend()
 
 # perf circle
 # ================================================
-# unknown
+# # unknown
 # error = [0.5, 0.5, 0.46, 0.43, 0.4, 0.4, 0.39, 0.42, 0.45, 0.55, 1.32, 2.96, 7.3]
 # yerr = [0.04, 0.02, 0.02, 0.00, 0.02, 0.01, 0, 0.02, 0, 0.01, 0.01, 0.01, 0.02]
 # # plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
-# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], error, yerr=yerr, capsize=5, label="Unknown correspondence")
+# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], error, yerr=yerr, capsize=5, label="Ours (unknown correspondence)")
 
 # # known
 # error = [0.3, 0.3, 0.3, 0.3, 0.29, 0.3, 0.29, 0.32, 0.32, 0.38, 0.52, 0.98, 3.1]
 # yerr = [0.03, 0.02, 0.03, 0.02, 0.01, 0.02, 0.01, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
 # # plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
-# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], error, yerr=yerr, capsize=5, label="Known correspondence")
+# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], error, yerr=yerr, capsize=5, label="Ours (known correspondence)")
 
 # # PR
 # error = [3.14, 6.17, 12.5, 23.26, 52.63, 90.9, 201.44, 333.3, 1021.51]
 # yerr = [0.02, 0.02, 0.04, 0.07, 0.1, 0.12, 0.19, 0.26, 0.32]
-# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024], error, yerr=yerr, capsize=5, label="Python Robotics (known)")
+# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024], error, yerr=yerr, capsize=5, label="Python Robotics (known correspondence)")
 
 # # plt.xticks(ticks=np.arange(13), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], rotation=45)
 # plt.xticks(ticks=[4, 512, 1024, 2048, 4096, 8192, 16384], labels=[4, 512, 1024, 2048, 4096, 8192, 16384], rotation=45)
 # ax.set_ylabel("Time (s)")
 # ax.set_yscale("log")
-
+# ax.set_xlabel("Number of particles")
 # plt.legend()
+# ================================================
+
+
+# perf fsonline
+# ================================================
+# # unknown
+# error = [2.28, 2.15, 1.71, 1.79, 1.66, 1.70, 1.90, 2.09, 2.37]
+# yerr = [0.05, 0.06, 0.02, 0.04, 0.07, 0.07, 0.07, 0.05, 0.05]
+# # plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
+# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024], error, yerr=yerr, capsize=5, label="Unknown correspondence")
+
+# # known
+# error = [0.33, 0.30, 0.32, 0.34, 0.36, 0.40, 0.44, 0.55, 0.74]
+# yerr = [0.00, 0.02, 0.02, 0.02, 0.01, 0.02, 0.01, 0.01, 0.02]
+# # plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
+# plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024], error, yerr=yerr, capsize=5, label="Known correspondence")
+
+
+# # plt.xticks(ticks=np.arange(13), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], rotation=45)
+# plt.xticks(ticks=[4, 64, 128, 256, 512, 1024], labels=[4, 64, 128, 256, 512, 1024], rotation=45)
+# ax.set_ylabel("Time (s)")
+# ax.set_xlabel("Number of particles")
+# plt.legend()
+# ================================================
+
+# perf HZ fsonline
+# ================================================
+# unknown
+error = 890/np.array([2.28, 2.15, 1.71, 1.79, 1.66, 1.70, 1.90, 2.09, 2.37])
+yerr = [0.05, 0.06, 0.02, 0.04, 0.07, 0.07, 0.07, 0.05, 0.05]
+# plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
+plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024], error, yerr=yerr, capsize=5, label="Unknown correspondence")
+
+# known
+error = 890/np.array([0.33, 0.30, 0.32, 0.34, 0.36, 0.40, 0.44, 0.55, 0.74])
+yerr = [0.00, 0.02, 0.02, 0.02, 0.01, 0.02, 0.01, 0.01, 0.02]
+# plt.errorbar(np.arange(13), error, yerr=yerr, capsize=5)
+plt.errorbar([4, 8, 16, 32, 64, 128, 256, 512, 1024], error, yerr=yerr, capsize=5, label="Known correspondence")
+
+# plt.xticks(ticks=np.arange(13), labels=[4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384], rotation=45)
+plt.xticks(ticks=[4, 64, 128, 256, 512, 1024], labels=[4, 64, 128, 256, 512, 1024], rotation=45)
+ax.set_ylabel("Update frequency (Hz)")
+ax.set_xlabel("Number of particles")
+plt.legend()
 # ================================================
 
 
 # ax.set_ylabel("MSE(trans)")
 # ax.plot([0,9], [0,0], "--", c="grey")
-# plt.grid()
+plt.grid(linestyle="--", alpha=0.5)
 
 if EXPORT:
-    plt.savefig('perf_circle.pgf')
+    plt.savefig('perf_fsonline_hz.pgf')
 else:
     plt.show()
 

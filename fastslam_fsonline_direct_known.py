@@ -1,7 +1,4 @@
-import math
-import time
 import numpy as np
-import scipy
 import scipy.stats
 import matplotlib.pyplot as plt
 import json
@@ -74,7 +71,7 @@ def run_SLAM(config, plot=False, seed=None):
 
 
     stats = Stats("Loop", "Measurement")
-    stats.add_pose(config.START_POSITION, config.START_POSITION)
+    stats.add_pose(config.START_POSITION.tolist(), config.START_POSITION.tolist())
     print("starting..")
 
     for i in range(config.ODOMETRY.shape[0]):
@@ -83,13 +80,17 @@ def run_SLAM(config, plot=False, seed=None):
 
         stats.start_measuring("Measurement")
 
-        pose = config.ODOMETRY[i]
+        pose = config.ODOMETRY[i].copy()
+        pose[2] = wrap_angle(pose[2])
+        est_pose = config.EST_ODOMETRY[i].copy()
+        est_pose[2] = wrap_angle(est_pose[2])
 
-        visible_measurements = config.sensor.MEASUREMENTS[i]
-        for k in range(len(visible_measurements)):
-            x, y, j = visible_measurements[k]
+        measurements = config.sensor.MEASUREMENTS[i]
+        visible_measurements = []
+        for m in measurements:
+            x, y, j = m
             r, b = xy2rb(pose, [x, y])
-            visible_measurements[k] = [r, b, j]
+            visible_measurements.append([r, b, j+1])
             
         visible_measurements = np.array(visible_measurements, dtype=np.float64)
 
@@ -105,27 +106,35 @@ def run_SLAM(config, plot=False, seed=None):
 
         cuda_modules["predict"].get_function("predict_from_imu")(
             memory.particles,
-            np.float64(config.EST_ODOMETRY[i, 0]), np.float64(config.EST_ODOMETRY[i, 1]), np.float64(config.EST_ODOMETRY[i, 2]),
+            np.float64(est_pose[0]), np.float64(est_pose[1]), np.float64(est_pose[2]),
             np.float64(config.ODOMETRY_VARIANCE[0] ** 0.5), np.float64(config.ODOMETRY_VARIANCE[1] ** 0.5), np.float64(config.ODOMETRY_VARIANCE[2] ** 0.5),
             block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
         )
 
-        block_size = config.N if config.N < 32 else 32
+        # block_size = config.N if config.N < 32 else 32
 
         # print("N MEASUREMENTS", len(visible_measurements))
 
         cuda_modules["update"].get_function("update")(
-            memory.particles, np.int32(1),
+            memory.particles, np.int32(config.N//config.THREADS),
             memory.measurements,
             np.int32(config.N), np.int32(len(visible_measurements)),
-            memory.cov, np.int32(config.MAX_LANDMARKS),
-            block=(block_size, 1, 1), grid=(config.N//block_size, 1, 1)
+            memory.cov, 
+            np.int32(config.MAX_LANDMARKS),
+            block=(config.THREADS, 1, 1)
         )
+        # cuda_modules["update"].get_function("update")(
+        #     memory.particles, np.int32(1),
+        #     memory.measurements,
+        #     np.int32(config.N), np.int32(len(visible_measurements)),
+        #     memory.cov, np.int32(config.MAX_LANDMARKS),
+        #     block=(block_size, 1, 1), grid=(config.N//block_size, 1, 1)
+        # )
 
         rescale(cuda_modules, config, memory)
         estimate = get_pose_estimate(cuda_modules, config, memory)
 
-        stats.add_pose([pose[0], pose[1], pose[2]], estimate)
+        stats.add_pose(pose.tolist(), estimate.tolist())
 
         if plot:
             cuda.memcpy_dtoh(particles, memory.particles)
@@ -161,24 +170,27 @@ def run_SLAM(config, plot=False, seed=None):
 
             # plot_landmarks(ax[0], missed_landmarks, color="red", zorder=102)
 
-            best = np.argmax(FlatParticle.w(particles))
             plot_landmarks(ax[1], config.LANDMARKS, color="black")
-            covariances = FlatParticle.get_covariances(particles, best)
+            # best = np.argmax(FlatParticle.w(particles))
+            # covariances = FlatParticle.get_covariances(particles, best)
+            # plot_map(ax[1], FlatParticle.get_landmarks(particles, best), color="orange", marker="o")
 
-            plot_map(ax[1], FlatParticle.get_landmarks(particles, best), color="orange", marker="o")
-            print(FlatParticle.get_landmarks(particles, best))
+            # for i, landmark in enumerate(FlatParticle.get_landmarks(particles, best)):
+            #     plot_confidence_ellipse(ax[1], landmark, covariances[i], n_std=3)
 
-            for i, landmark in enumerate(FlatParticle.get_landmarks(particles, best)):
-                plot_confidence_ellipse(ax[1], landmark, covariances[i], n_std=3)
+            for ii in range(config.N):
+                plot_map(ax[1], FlatParticle.get_landmarks(particles, ii), color="orange", marker="o")
+                covariances = FlatParticle.get_covariances(particles, ii)
 
-            plt.pause(0.001)
+
+            plt.pause(3)
 
 
-        if i == config.ODOMETRY.shape[0]-1:
-            cuda.memcpy_dtoh(particles, memory.particles)
-            best = np.argmax(FlatParticle.w(particles))
-            best_covariances = FlatParticle.get_covariances(particles, best)
-            best_landmarks = FlatParticle.get_landmarks(particles, best)
+        # if i == config.ODOMETRY.shape[0]-1:
+        #     cuda.memcpy_dtoh(particles, memory.particles)
+        #     best = np.argmax(FlatParticle.w(particles))
+        #     best_covariances = FlatParticle.get_covariances(particles, best)
+        #     best_landmarks = FlatParticle.get_landmarks(particles, best)
 
 
         cuda_modules["weights_and_mean"].get_function("get_weights")(
@@ -194,32 +206,32 @@ def run_SLAM(config, plot=False, seed=None):
         stats.stop_measuring("Loop")
 
 
-    if not plot:
-        output = {
-            "ground": [list(p) for p in stats.ground_truth_path],
-            "predicted": [list(p) for p in stats.predicted_path],
-            "landmarks": config.LANDMARKS.tolist(),
-            "map": [list(lm) for lm in best_landmarks],
-            "map_covariance": [cov.tolist() for cov in best_covariances]
-        }
+    # if not plot:
+    #     output = {
+    #         "ground": [list(p) for p in stats.ground_truth_path],
+    #         "predicted": [list(p) for p in stats.predicted_path],
+    #         "landmarks": config.LANDMARKS.tolist(),
+    #         "map": [list(lm) for lm in best_landmarks],
+    #         "map_covariance": [cov.tolist() for cov in best_covariances]
+    #     }
 
-        fname = f"figs_fsonline/fixed_data_known_{config.N}_{config.THRESHOLD}_{seed}.json"
+    #     fname = f"figs_fsonline/fixed_data_known_{config.N}_{config.THRESHOLD}_{seed}.json"
 
-        with open(fname, "w") as f:
-            json.dump(output, f)
+    #     with open(fname, "w") as f:
+    #         json.dump(output, f)
 
-        fig, ax = plt.subplots(figsize=(15, 10))
-        plot_history(ax, stats.ground_truth_path, color='green', markersize=1, linewidth=1, style="-", label="Ground truth")
-        plot_history(ax, stats.predicted_path, color='orange', markersize=1, linewidth=1, style="-", label="SLAM estimate")
-        # plot_history(ax, dead_reckoning, color='purple', markersize=1, linewidth=1, style="-", label="Dead reckoning")
-        plot_landmarks(ax, config.LANDMARKS, color="blue")
-        plot_map(ax, best_landmarks, color="orange", marker="o")
-        for i, landmark in enumerate(best_landmarks):
-            plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
+    #     fig, ax = plt.subplots(figsize=(15, 10))
+    #     plot_history(ax, stats.ground_truth_path, color='green', markersize=1, linewidth=1, style="-", label="Ground truth")
+    #     plot_history(ax, stats.predicted_path, color='orange', markersize=1, linewidth=1, style="-", label="SLAM estimate")
+    #     # plot_history(ax, dead_reckoning, color='purple', markersize=1, linewidth=1, style="-", label="Dead reckoning")
+    #     plot_landmarks(ax, config.LANDMARKS, color="blue")
+    #     plot_map(ax, best_landmarks, color="orange", marker="o")
+    #     for i, landmark in enumerate(best_landmarks):
+    #         plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
 
-        plt.legend()
-        fname = f"figs_fsonline/fixed_plot_known_{config.N}_{config.THRESHOLD}_{seed}.png"
-        plt.savefig(fname)
+    #     plt.legend()
+    #     fname = f"figs_fsonline/fixed_plot_known_{config.N}_{config.THRESHOLD}_{seed}.png"
+    #     plt.savefig(fname)
 
     memory.free()
     stats.summary()
@@ -229,4 +241,4 @@ def run_SLAM(config, plot=False, seed=None):
 if __name__ == "__main__":
     from config_fsonline_direct_known import config
     context.set_limit(limit.MALLOC_HEAP_SIZE, config.GPU_HEAP_SIZE_BYTES)
-    run_SLAM(config, plot=True)
+    run_SLAM(config, plot=False)

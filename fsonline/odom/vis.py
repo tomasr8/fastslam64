@@ -4,6 +4,15 @@ import scipy
 import scipy.stats
 import matplotlib.pyplot as plt
 import json
+import matplotlib
+
+def get_length(odom):
+    s = 0
+
+    for i in range(len(odom) - 1):
+        s += np.linalg.norm(odom[i, :2] - odom[i+1, :2])
+
+    return s
 
 def pi_2_pi(angle):
     return (angle + math.pi) % (2 * math.pi) - math.pi
@@ -159,6 +168,23 @@ A = 0
 B = 880
 true_odom, x_odom, true_measurements, x_measurements = process_compare(data, A, B)
 
+
+EXPORT = False
+
+if EXPORT:
+    matplotlib.use("pgf")
+    matplotlib.rcParams.update({
+        "pgf.texsystem": "pdflatex",
+        'font.family': 'serif',
+        'text.usetex': True,
+        'pgf.rcfonts': False,
+    })
+
+
+# fig, ax = plt.subplots()
+# fig.set_size_inches(w=5.02, h=5.02)
+# fig.subplots_adjust(left=0.01, right=0.99, bottom=0.08, top=0.99)
+
 # plt.plot(true_odom[:, 2], c="green")
 # plt.plot(x_odom[:, 2], c="orange")
 
@@ -173,7 +199,8 @@ true_odom, x_odom, true_measurements, x_measurements = process_compare(data, A, 
 #     plt.plot([x, x+0.2*np.cos(theta)], [y, y+0.2*np.sin(theta)], c="green")
 #     # plt.plot([x, x+15*np.cos(theta)], [y, y+15*np.sin(theta)], c="green", linewidth=0.1)
 
-plt.plot(true_odom[:, 0], true_odom[:, 1], linestyle='dashed', marker='o', c="green", markersize=4)
+plt.plot(true_odom[:, 0], true_odom[:, 1], linestyle='dashed', c="green", label="Robot path")
+# marker='o', c="green", markersize=4, markevery=5
 
 # for (x, y, theta) in x_odom:
 #     plt.plot([x, x+0.2*np.cos(theta)], [y, y+0.2*np.sin(theta)], c="orange")
@@ -187,12 +214,32 @@ plt.plot(true_odom[:, 0], true_odom[:, 1], linestyle='dashed', marker='o', c="gr
 
 
 # plt.scatter(true_measurements[:, 0], true_measurements[:, 1], c="orange", s=3)
-plt.scatter(x_measurements[:, 0], x_measurements[:, 1], c="orange", s=3)
+plt.scatter(true_measurements[:, 0], true_measurements[:, 1], c="green", s=3, label="Measurements")
+
+plt.scatter(x_measurements[:, 0], x_measurements[:, 1], c="orange", s=3, label="Measurements")
 
 track = np.load("../track.npy")
 # track = track[(track[:, 0] > -5) & (track[:, 0] < 5)]
 # track = track[(track[:, 1] > 0) & (track[:, 1] < 11)]
-plt.scatter(track[:, 0], track[:, 1], marker=(7, 1, 0), c="blue", s=35)
-plt.axis("equal")
+plt.scatter(track[:, 0], track[:, 1], marker=(7, 1, 0), c="blue", s=35, label="Landmarks")
 
-plt.show()
+# ax.set_xticks([])
+# ax.set_yticks([])
+
+
+# plt.xlim(-124, -97)
+# plt.ylim(9, 21.5)
+
+
+# plt.legend(loc='upper center', bbox_to_anchor=(0.5, 0.0),
+#           fancybox=False, shadow=False, ncol=3, columnspacing=0.5)
+
+
+
+print(get_length(true_odom))
+# plt.axis("equal")
+
+if EXPORT:
+    plt.savefig('fsonline_histogram.pgf')
+else:
+    plt.show()
