@@ -297,24 +297,24 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
     for(int i = 0; i < n_landmarks; i++) {
         n_matches[i] = 0;
         double *mean = get_mean(particle, i);
-        in_range[n_in_range] = i;
-        n_in_range++;
-        // if(in_sensor_range(particle, mean, range, fov)) {
-        //     in_range[n_in_range] = i;
-        //     n_in_range++;
-        // }
+        // in_range[n_in_range] = i;
+        // n_in_range++;
+        if(in_sensor_range(particle, mean, range, fov)) {
+            in_range[n_in_range] = i;
+            n_in_range++;
+        }
     }
 
     for(int i = 0; i < n_measurements; i++) {
         double best = 1000000.0;
         int best_idx = -1;
 
-        for(int j = 0; j < n_in_range; j++) {
-            double dist = compute_dist(particle, in_range[j], measurements->measurements[i], measurement_cov);
+        for(int j = 0; j < n_landmarks; j++) {
+            double dist = compute_dist(particle, j, measurements->measurements[i], measurement_cov);
 
-            if(dist <= thresh && dist < best) {
+            if(dist <= thresh && dist < best /*&& n_matches[j] == 0*/) {
                 best = dist;
-                best_idx = in_range[j];
+                best_idx = j;
             }
         }
 
@@ -387,16 +387,16 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
         }
     }
 
-    // for(int i = n_in_range - 1; i > 0; i--) {
-    //     int idx = in_range[i];
-    //     if(n_matches[idx] == 0) {
-    //         decrement_landmark_prob(particle, idx);
-    //         double prob = get_landmark_prob(particle, idx)[0];
-    //         if(prob < 0) {
-    //             remove_landmark(particle, idx);
-    //         }
-    //     } 
-    // }
+    for(int i = n_in_range - 1; i > 0; i--) {
+        int idx = in_range[i];
+        if(n_matches[idx] == 0) {
+            decrement_landmark_prob(particle, idx);
+            double prob = get_landmark_prob(particle, idx)[0];
+            if(prob <= 0) {
+                remove_landmark(particle, idx);
+            }
+        } 
+    }
 }
 
 __global__ void update(
