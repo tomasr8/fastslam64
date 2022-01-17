@@ -82,7 +82,8 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
 
         pose = config.ODOMETRY[i]
 
-        visible_measurements = config.sensor.MEASUREMENTS[i]
+        colors = config.sensor.MEASUREMENTS[i][:, 2]
+        visible_measurements = config.sensor.MEASUREMENTS[i][:, :2]
         visible_measurements = np.array([xy2rb(pose, m) for m in visible_measurements], dtype=np.float64)
 
         stats.stop_measuring("Measurement")
@@ -128,11 +129,28 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
             ax[0].set_ylim([-70, 30])
             ax[1].set_xlim([-20, 40])
             ax[1].set_ylim([-70, 30])
-            # ax[0].set_axis_off()
-            # ax[1].set_axis_off()
 
-            # plot_sensor_fov(ax[0], pose, config.sensor.RANGE, config.sensor.FOV)
-            # plot_sensor_fov(ax[1], pose, config.sensor.RANGE, config.sensor.FOV)
+            major_x_ticks = np.arange(-20, 40, 20)
+            minor_x_ticks = np.arange(-20, 40, 2)
+            major_y_ticks = np.arange(-70, 30, 20)
+            minor_y_ticks = np.arange(-70, 30, 2)
+
+            ax[0].set_xticks(major_x_ticks)
+            ax[0].set_xticks(minor_x_ticks, minor=True)
+            ax[0].set_yticks(major_y_ticks)
+            ax[0].set_yticks(minor_y_ticks, minor=True)
+            ax[1].set_xticks(major_x_ticks)
+            ax[1].set_xticks(minor_x_ticks, minor=True)
+            ax[1].set_yticks(major_y_ticks)
+            ax[1].set_yticks(minor_y_ticks, minor=True)
+
+            ax[0].grid(which='minor', alpha=0.2)
+            ax[0].grid(which='major', alpha=0.5)
+            ax[1].grid(which='minor', alpha=0.2)
+            ax[1].grid(which='major', alpha=0.5)
+
+            plot_sensor_fov(ax[0], pose, config.sensor.RANGE, config.sensor.FOV)
+            plot_sensor_fov(ax[1], pose, config.sensor.RANGE, config.sensor.FOV)
 
             visible_measurements = np.array([rb2xy(pose, m) for m in visible_measurements])
 
@@ -144,9 +162,18 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
             plot_history(ax[0], stats.predicted_path, color='orange')
             plot_history(ax[0], config.ODOMETRY[:i], color='red')
 
+            cone_colors = []
+            for c in colors:
+                if c == 0:
+                    cone_colors.append('blue')
+                elif c == 1:
+                    cone_colors.append('yellow')
+                else:
+                    cone_colors.append('orange')
+
             plot_particles_weight(ax[0], particles)
             if(visible_measurements.size != 0):
-                plot_measurement(ax[0], pose[:2], visible_measurements, color="orange", zorder=103)
+                plot_measurement(ax[0], pose[:2], visible_measurements, color=cone_colors, zorder=103)
 
             best = np.argmax(FlatParticle.w(particles))
             # plot_landmarks(ax[1], config.LANDMARKS, color="black")
@@ -157,7 +184,7 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
             for i, landmark in enumerate(FlatParticle.get_landmarks(particles, best)):
                 plot_confidence_ellipse(ax[1], landmark, covariances[i], n_std=3)
 
-            ax[0].arrow(pose[0], pose[1], 2.5*np.sin(pose[2]), 2.5*np.cos(pose[2]), color="green", width=0.2, head_width=0.5)
+            ax[0].arrow(pose[0], pose[1], 2.5*np.cos(pose[2]), 2.5*np.sin(pose[2]), color="green", width=0.2, head_width=0.5)
 
             plt.pause(0.001)
 
