@@ -116,8 +116,8 @@ def process(data, N):
             colors = np.reshape(colors, (colors.shape[0], 1))
             cones = local_to_global(cones[:, :2], x, y, theta)
             cones = np.hstack((cones, colors))
-            cones = remove_duplicate_measurements(cones, thresh=1.7)
-            # Each measurement has x & y global position and             
+            cones = remove_duplicate_measurements(cones, thresh=1.5)
+            # Each measurement has x & y global position and color        
             measurements.append(cones)
         else:
             measurements.append([])
@@ -140,17 +140,17 @@ config = {
     "DT": 1.0,
     "THREADS": 512, # number threads in a block
     "GPU_HEAP_SIZE_BYTES": 2 * 100000 * 1024, # available GPU heap size
-    "THRESHOLD": 2.0,
+    "THRESHOLD": 2.5,
     "sensor": {
-        "RANGE": 8,
-        "FOV": np.pi*0.75,
-        "VARIANCE": [0.15 ** 2, np.deg2rad(1) ** 2],
+        "RANGE": 9.0,
+        "FOV": np.pi*0.85,
+        "VARIANCE": [0.25 ** 2, np.deg2rad(1) ** 2],
         "MAX_MEASUREMENTS": 100, # upper bound on the total number of simultaneous measurements
         "MEASUREMENTS": measurements,
         "MISS_PROB": 0
     },
     "ODOMETRY": odom,
-    "ODOMETRY_VARIANCE": [0.15 ** 2, 0.15 ** 2, np.deg2rad(1) ** 2],
+    "ODOMETRY_VARIANCE": [0.1 ** 2, 0.1 ** 2, np.deg2rad(1) ** 2],
     # "LANDMARKS": np.load("accel_landmarks.npy").astype(np.float64), # landmark positions
     "MAX_LANDMARKS": 1000, # upper bound on the total number of landmarks in the environment
     "START_POSITION": odom[0].copy()
@@ -162,4 +162,4 @@ config.sensor.COVARIANCE = \
     np.diag(config.sensor.VARIANCE).astype(np.float64)
 
 config.PARTICLES_PER_THREAD = config.N // config.THREADS
-config.PARTICLE_SIZE = 6 + 7*config.MAX_LANDMARKS
+config.PARTICLE_SIZE = 6 + 8*config.MAX_LANDMARKS

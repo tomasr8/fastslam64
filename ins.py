@@ -16,24 +16,26 @@ from pycuda.driver import limit
 from lib.stats import Stats
 from lib.common import CUDAMemory, resample, rescale, get_pose_estimate
 from cuda.fastslam import load_cuda_modules
+from lib.utils import number_to_color
 
 def wrap_angle(angle):
     return np.arctan2(np.sin(angle), np.cos(angle))
 
 def rb2xy(pose, rb):
     [_, _, theta] = pose
-    [r, b] = rb
-    return [r * np.cos(b + theta), r * np.sin(b + theta)]
+    [r, b, color] = rb
+    return [r * np.cos(b + theta), r * np.sin(b + theta), color]
 
 def xy2rb(pose, landmark):
+    color = landmark[2]
     position = pose[:2]
-    vector_to_landmark = np.array(landmark - position, dtype=np.float64)
+    vector_to_landmark = np.array(landmark[:2] - position, dtype=np.float64)
 
     r = np.linalg.norm(vector_to_landmark)
     b = np.arctan2(vector_to_landmark[1], vector_to_landmark[0]) - pose[2]
     b = wrap_angle(b)
 
-    return r, b
+    return r, b, color
 
 
 def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"):
@@ -82,8 +84,8 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
 
         pose = config.ODOMETRY[i]
 
-        colors = config.sensor.MEASUREMENTS[i][:, 2]
-        visible_measurements = config.sensor.MEASUREMENTS[i][:, :2]
+        # colors = config.sensor.MEASUREMENTS[i][:, 2]
+        visible_measurements = config.sensor.MEASUREMENTS[i]#[:, :2]
         visible_measurements = np.array([xy2rb(pose, m) for m in visible_measurements], dtype=np.float64)
 
         stats.stop_measuring("Measurement")
@@ -155,31 +157,24 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
             visible_measurements = np.array([rb2xy(pose, m) for m in visible_measurements])
 
             if(visible_measurements.size != 0):
-                plot_connections(ax[0], pose, visible_measurements + pose[:2])
+                plot_connections(ax[0], pose, visible_measurements[:, :2] + pose[:2])
 
             # plot_landmarks(ax[0], config.LANDMARKS, color="blue", zorder=100)
             plot_history(ax[0], stats.ground_truth_path, color='green')
             plot_history(ax[0], stats.predicted_path, color='orange')
             plot_history(ax[0], config.ODOMETRY[:i], color='red')
 
-            cone_colors = []
-            for c in colors:
-                if c == 0:
-                    cone_colors.append('blue')
-                elif c == 1:
-                    cone_colors.append('yellow')
-                else:
-                    cone_colors.append('orange')
-
             plot_particles_weight(ax[0], particles)
             if(visible_measurements.size != 0):
-                plot_measurement(ax[0], pose[:2], visible_measurements, color=cone_colors, zorder=103)
+                cone_colors = [number_to_color(n) for n in visible_measurements[:, 2]]
+                plot_measurement(ax[0], pose[:2], visible_measurements[:, :2], color=cone_colors, zorder=103)
 
             best = np.argmax(FlatParticle.w(particles))
             # plot_landmarks(ax[1], config.LANDMARKS, color="black")
             covariances = FlatParticle.get_covariances(particles, best)
 
-            plot_map(ax[1], FlatParticle.get_landmarks(particles, best), color="orange", marker="o")
+            plot_map(ax[1], FlatParticle.get_landmarks(particles, best),
+                     [number_to_color(n) for n in FlatParticle.get_colors(particles, best)], marker="o")
 
             for i, landmark in enumerate(FlatParticle.get_landmarks(particles, best)):
                 plot_confidence_ellipse(ax[1], landmark, covariances[i], n_std=3)

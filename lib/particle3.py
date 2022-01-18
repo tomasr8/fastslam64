@@ -28,31 +28,31 @@ class FlatParticle(object):
     @staticmethod
     def x(particles):
         max_landmarks = int(particles[4])
-        step = 6 + 7*max_landmarks
+        step = 6 + 8*max_landmarks
         return particles[0::step]
 
     @staticmethod
     def y(particles):
         max_landmarks = int(particles[4])
-        step = 6 + 7*max_landmarks
+        step = 6 + 8*max_landmarks
         return particles[1::step]
 
     @staticmethod
     def w(particles):
         max_landmarks = int(particles[4])
-        step = 6 + 7*max_landmarks
+        step = 6 + 8*max_landmarks
         return particles[3::step]
 
     @staticmethod
     def len(particles):
         max_landmarks = int(particles[4])
         length = particles.shape[0]
-        return int(length/(6 + 7*max_landmarks))
+        return int(length/(6 + 8*max_landmarks))
 
     @staticmethod
     def get_particle(particles, i):
         max_landmarks = int(particles[4])
-        size = 6 + 7*max_landmarks
+        size = 6 + 8*max_landmarks
         offset = size * i
         return particles[offset:offset+size]
 
@@ -82,8 +82,16 @@ class FlatParticle(object):
         return covariances
 
     @staticmethod
+    def get_colors(particles, i):
+        particle = FlatParticle.get_particle(particles, i)
+        max_landmarks = int(particle[4])
+        n_landmarks = int(particle[5])
+
+        return particle[6+7*max_landmarks:6+7*max_landmarks+n_landmarks].reshape((n_landmarks, 1))
+
+    @staticmethod
     def get_initial_particles(n_particles: int, max_landmarks: int, starting_position: np.ndarray, sigma: float):
-        step = 6 + 7*max_landmarks
+        step = 6 + 8*max_landmarks
         particles = np.zeros(n_particles * step, dtype=np.float64)
 
         particles[0::step] = starting_position[0]

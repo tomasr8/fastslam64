@@ -45,6 +45,8 @@ __device__ double* get_particle(double *particles, int i) {
         dest[6+2*max_landmarks+4*k+3] = source[6+2*max_landmarks+4*k+3];
 
         dest[6+6*max_landmarks+k] = source[6+6*max_landmarks+k];
+        
+        dest[6+7*max_landmarks+k] = source[6+7*max_landmarks+k];
     }
 }
 

@@ -22,3 +22,11 @@ def repeat(slam, seeds):
 
     return np.mean(deviations), np.std(deviations)
 
+
+def number_to_color(n):
+    if n == 0:
+        return 'blue'
+    elif n == 1:
+        return 'yellow'
+    else:
+        return 'orange'

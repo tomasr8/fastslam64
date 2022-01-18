@@ -7,10 +7,11 @@
 #endif
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
+#define PARTICLE_SIZE <<PARTICLE_SIZE>>
 
 typedef struct 
 {
-    double (*measurements)[2];
+    double (*measurements)[3];
     int n_measurements;
     double *measurement_cov;
 } landmark_measurements;
@@ -61,8 +62,7 @@ __device__ void to_coords(double *particle, double *in, double *out) {
 }
 
 __device__ double* get_particle(double *particles, int i) {
-    int max_landmarks = (int)particles[4];
-    return (particles + (6 + 7*max_landmarks)*i);
+    return (particles + PARTICLE_SIZE*i);
 }
 
 __device__ double* get_mean(double *particle, int i)
@@ -96,12 +96,18 @@ __device__ void decrement_landmark_prob(double *particle, int i)
     prob[0] -= 1.0;
 }
 
+__device__ double* get_landmark_color(double *particle, int i)
+{
+    int max_landmarks = (int)particle[4];
+    return (particle + 6 + 7*max_landmarks + i);
+}
+
 __device__ int get_n_landmarks(double *particle)
 {
     return (int)particle[5];
 }
 
-__device__ void add_landmark(double *particle, double mean[2], double *cov)
+__device__ void add_landmark(double *particle, double mean[2], double *cov, double color)
 {
     int n_landmarks = (int)particle[5];
     particle[5] = (double)(n_landmarks + 1);
@@ -109,6 +115,7 @@ __device__ void add_landmark(double *particle, double mean[2], double *cov)
     double *new_mean = get_mean(particle, n_landmarks);
     double *new_cov = get_cov(particle, n_landmarks);
     double *new_prob = get_landmark_prob(particle, n_landmarks);
+    double *new_color = get_landmark_color(particle, n_landmarks);
 
     new_mean[0] = mean[0];
     new_mean[1] = mean[1];
@@ -119,6 +126,8 @@ __device__ void add_landmark(double *particle, double mean[2], double *cov)
     new_cov[3] = cov[3];
 
     new_prob[0] = 1.0;
+
+    new_color[0] = color;
 }
 
 __device__ void remove_landmark(double *particle, int i)
@@ -232,6 +241,7 @@ __device__ double pdf(double *x, double *mean, double* cov)
 
 __device__ void add_measurement_as_landmark(double *particle, double *measurement, double *measurement_cov)
 {
+    double color = measurement[2];
     double pos[] = { particle[0], particle[1] };
     double landmark[] = {0, 0};
     to_coords(particle, measurement, landmark);
@@ -256,7 +266,7 @@ __device__ void add_measurement_as_landmark(double *particle, double *measuremen
 
     matmul(H, measurement_cov, S);
     matmul(S, H_inv_t, S);
-    add_landmark(particle, landmark, S);
+    add_landmark(particle, landmark, S, color);
 }
 
 
@@ -400,7 +410,7 @@ __device__ void update_landmarks(int id, double *particle, landmark_measurements
 }
 
 __global__ void update(
-    double *particles, int block_size, int *scratchpad_mem, int scratchpad_size, double measurements_array[][2], int n_particles, int n_measurements,
+    double *particles, int block_size, int *scratchpad_mem, int scratchpad_size, double measurements_array[][3], int n_particles, int n_measurements,
     double *measurement_cov, double threshold, double range, double fov, int max_landmarks)
 {
 
