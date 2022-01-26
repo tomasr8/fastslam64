@@ -152,6 +152,11 @@ __device__ void remove_landmark(double *particle, int i)
     double *prob_b = get_landmark_prob(particle, n_landmarks - 1);
 
     prob_a[0] = prob_b[0];
+
+    double *color_a = get_landmark_color(particle, i);
+    double *color_b = get_landmark_color(particle, n_landmarks - 1);
+
+    color_a[0] = color_b[0];
     
     particle[5] = (double)(n_landmarks - 1);
 }
