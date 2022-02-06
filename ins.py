@@ -176,6 +176,9 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
             plot_map(ax[1], FlatParticle.get_landmarks(particles, best),
                      [number_to_color(n) for n in FlatParticle.get_colors(particles, best)], marker="o")
 
+            plot_map(ax[0], FlatParticle.get_landmarks(particles, best),
+                     [number_to_color(n) for n in FlatParticle.get_colors(particles, best)], size=8, marker="o", edgecolor='black')
+
             for i, landmark in enumerate(FlatParticle.get_landmarks(particles, best)):
                 plot_confidence_ellipse(ax[1], landmark, covariances[i], n_std=3)
 
@@ -204,7 +207,6 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
         stats.stop_measuring("Loop")
 
 
-    n_landmarks = 0
     if not plot:
         output = {
             "map_size": len(best_landmarks),
@@ -222,19 +224,18 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
         plot_history(ax, stats.ground_truth_path, color='green', linewidth=0.3, markersize=0.5)
         plot_history(ax, stats.predicted_path, color='orange', linewidth=0.3, markersize=0.5)
         # plot_landmarks(ax, config.LANDMARKS, color="blue")
-        plot_map(ax, best_landmarks, color="orange", marker="o")
+        plot_map(ax, FlatParticle.get_landmarks(particles, best),
+                 [number_to_color(n) for n in FlatParticle.get_colors(particles, best)], marker="o")
         for i, landmark in enumerate(best_landmarks):
             plot_confidence_ellipse(ax, landmark, best_covariances[i], n_std=3)
 
         plt.savefig(outpic)
         plt.close(fig)
 
-        n_landmarks = len(best_landmarks)
-
 
     memory.free()
     stats.summary()
-    return stats.mean_path_deviation(), n_landmarks
+    return stats.mean_path_deviation()
 
 
 if __name__ == "__main__":

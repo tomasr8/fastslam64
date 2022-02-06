@@ -130,7 +130,7 @@ def process(data, N):
 with open("/home/tomas/Desktop/eforce/ins_funkcni/slam.json") as f:
     data = json.load(f)
 
-data = data[800:]
+data = data[1080:]
 N = len(data)
 odom, measurements = process(data, N)
 
@@ -140,17 +140,20 @@ config = {
     "DT": 1.0,
     "THREADS": 512, # number threads in a block
     "GPU_HEAP_SIZE_BYTES": 2 * 100000 * 1024, # available GPU heap size
-    "THRESHOLD": 2.5,
+    "THRESHOLD": 2.1,
     "sensor": {
         "RANGE": 9.0,
         "FOV": np.pi*0.85,
-        "VARIANCE": [0.25 ** 2, np.deg2rad(1) ** 2],
+        # "VARIANCE": [0.25 ** 2, np.deg2rad(1) ** 2],
+        "VARIANCE": [2.5 ** 2, np.deg2rad(10) ** 2],
         "MAX_MEASUREMENTS": 100, # upper bound on the total number of simultaneous measurements
         "MEASUREMENTS": measurements,
         "MISS_PROB": 0
     },
     "ODOMETRY": odom,
-    "ODOMETRY_VARIANCE": [0.1 ** 2, 0.1 ** 2, np.deg2rad(1) ** 2],
+    # "ODOMETRY_VARIANCE": [0.1 ** 2, 0.1 ** 2, np.deg2rad(1) ** 2],
+    "ODOMETRY_VARIANCE": [0.2 ** 2, 0.2 ** 2, np.deg2rad(1.5) ** 2],
+
     # "LANDMARKS": np.load("accel_landmarks.npy").astype(np.float64), # landmark positions
     "MAX_LANDMARKS": 1000, # upper bound on the total number of landmarks in the environment
     "START_POSITION": odom[0].copy()

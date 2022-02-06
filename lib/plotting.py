@@ -10,8 +10,8 @@ def plot_history(ax, history, color='green', markersize=3, linewidth=2, style="-
 def plot_landmarks(ax, landmarks, color='blue', zorder=0, label=None, s=None):
     ax.scatter(landmarks[:, 0], landmarks[:, 1], marker=(7, 1, 0), color=color, zorder=zorder, label=label, s=s)
 
-def plot_map(ax, landmarks, colors, marker="."):
-    ax.scatter(landmarks[:, 0], landmarks[:, 1], s=12, marker=marker, color=colors)
+def plot_map(ax, landmarks, colors, size=12, marker=".", edgecolor=None):
+    ax.scatter(landmarks[:, 0], landmarks[:, 1], s=size, marker=marker, color=colors, edgecolor=edgecolor)
 
 def plot_measurement(ax, pos, landmarks, color, zorder, size=20, label=None):
     landmarks = landmarks + pos
