@@ -74,11 +74,11 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
     stats = Stats("Loop", "Measurement")
     stats.add_pose(config.START_POSITION, config.START_POSITION)
 
-    plt.pause(1)
+    # plt.pause(1)
 
     for i in range(config.ODOMETRY.shape[0]):
         stats.start_measuring("Loop")
-        print(i)
+        # print(i)
 
         stats.start_measuring("Measurement")
 
@@ -208,17 +208,17 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
 
 
     if not plot:
-        output = {
-            "map_size": len(best_landmarks),
-            "ground": [list(v) for v in stats.ground_truth_path],
-            "predicted": [list(v) for v in stats.predicted_path],
-            # "landmarks": config.LANDMARKS.tolist(),
-            "map": [list(lm) for lm in best_landmarks],
-            "map_covariance": [cov.tolist() for cov in best_covariances]
-        }
+        # output = {
+        #     "map_size": len(best_landmarks),
+        #     "ground": [list(v) for v in stats.ground_truth_path],
+        #     "predicted": [list(v) for v in stats.predicted_path],
+        #     # "landmarks": config.LANDMARKS.tolist(),
+        #     "map": [list(lm) for lm in best_landmarks],
+        #     "map_covariance": [cov.tolist() for cov in best_covariances]
+        # }
 
-        with open(outjson, "w") as f:
-            json.dump(output, f)
+        # with open(outjson, "w") as f:
+        #     json.dump(output, f)
 
         fig, ax = plt.subplots()
         plot_history(ax, stats.ground_truth_path, color='green', linewidth=0.3, markersize=0.5)
@@ -234,8 +234,9 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
 
 
     memory.free()
-    stats.summary()
-    return stats.mean_path_deviation()
+    # stats.summary()
+    # return stats.mean_path_deviation()
+    return len(best_landmarks)
 
 
 if __name__ == "__main__":

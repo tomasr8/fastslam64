@@ -127,16 +127,16 @@ def process(data, N):
     return odom, measurements
 
 
-with open("/home/tomas/Desktop/eforce/ins_funkcni/slam.json") as f:
+with open("slam_aut_17_11_21.json") as f:
     data = json.load(f)
 
-data = data[1080:]
+data = data[800:]
 N = len(data)
 odom, measurements = process(data, N)
 
 config = {
     "SEED": 9,
-    "N": 512, # number of particles
+    "N": 2048, # number of particles
     "DT": 1.0,
     "THREADS": 512, # number threads in a block
     "GPU_HEAP_SIZE_BYTES": 2 * 100000 * 1024, # available GPU heap size
