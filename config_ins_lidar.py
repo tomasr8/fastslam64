@@ -11,7 +11,7 @@ def get_heading(o):
         2.0*(o[0]*o[1] + o[3]*o[2]),
         o[3]*o[3] + o[0]*o[0] - o[1]*o[1] - o[2]*o[2]
     )
-    return -roll #- np.deg2rad(5)
+    return -roll
 
 
 def pi_2_pi(angle):
@@ -127,18 +127,10 @@ def process(data, N):
     return odom, measurements
 
 
-# with open("aut_camera.json") as f:
-# with open("aut_combined.json") as f:
-# with open("skidpad_02.json") as f:
-# with open("td_01.json") as f:
-with open("td_02.json") as f:
+with open("aut_lidar.json") as f:
     data = json.load(f)
 
-# data = data[800:] # aut
-# data = data[1800:] # skidpad01
-# data = data[1100:] # skidpad02
-# data = data[4000:] # td01
-data = data[80:] # td02
+data = data[800:]
 N = len(data)
 odom, measurements = process(data, N)
 
@@ -150,7 +142,7 @@ config = {
     "GPU_HEAP_SIZE_BYTES": 2 * 100000 * 1024, # available GPU heap size
     "THRESHOLD": 2.1,
     "sensor": {
-        "RANGE": 9.0,
+        "RANGE": 13.0,
         "FOV": np.pi*0.85,
         # "VARIANCE": [0.25 ** 2, np.deg2rad(1) ** 2],
         "VARIANCE": [1.5 ** 2, np.deg2rad(5) ** 2],
@@ -159,9 +151,10 @@ config = {
         "MISS_PROB": 0
     },
     "ODOMETRY": odom,
-    "ODOMETRY_VARIANCE": [0.1 ** 2, 0.1 ** 2, np.deg2rad(0.5) ** 2],
-    # "ODOMETRY_VARIANCE": [0.2 ** 2, 0.2 ** 2, np.deg2rad(1.5) ** 2],
-    # "ODOMETRY_VARIANCE": [0.3 ** 2, 0.3 ** 2, np.deg2rad(3.5) ** 2],
+    # "ODOMETRY_VARIANCE": [0.1 ** 2, 0.1 ** 2, np.deg2rad(1) ** 2],
+    "ODOMETRY_VARIANCE": [0.2 ** 2, 0.2 ** 2, np.deg2rad(1.5) ** 2],
+
+    # "LANDMARKS": np.load("accel_landmarks.npy").astype(np.float64), # landmark positions
     "MAX_LANDMARKS": 1000, # upper bound on the total number of landmarks in the environment
     "START_POSITION": odom[0].copy()
 }

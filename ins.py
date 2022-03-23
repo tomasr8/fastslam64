@@ -240,6 +240,7 @@ def run_SLAM(config, plot=False, seed=None, outpic="pic.png", outjson="out.json"
 
 
 if __name__ == "__main__":
-    from config_ins import config
+    # from config_ins import config
+    from config_ins_lidar import config
     context.set_limit(limit.MALLOC_HEAP_SIZE, config.GPU_HEAP_SIZE_BYTES)
     run_SLAM(config, plot=True)
