@@ -1,17 +1,18 @@
 import json
 import numpy as np
-from lib.utils import dotify
 import math
+from slam import Slam
+
 
 def get_heading(o):
     # The heading given by the INS is encoded in the roll component
     # It also needs to be negated for some reason,
     # otherwise it turns in the wrong direction.
     roll = np.arctan2(
-        2.0*(o[0]*o[1] + o[3]*o[2]),
-        o[3]*o[3] + o[0]*o[0] - o[1]*o[1] - o[2]*o[2]
+        2.0 * (o[0] * o[1] + o[3] * o[2]),
+        o[3] * o[3] + o[0] * o[0] - o[1] * o[1] - o[2] * o[2]
     )
-    return -roll #- np.deg2rad(5)
+    return -roll  # - np.deg2rad(5)
 
 
 def pi_2_pi(angle):
@@ -40,35 +41,37 @@ class Subset:
         self.parent = parent
         self.rank = rank
 
+
 def find(subsets, node):
     if subsets[node].parent != node:
         subsets[node].parent = find(subsets, subsets[node].parent)
     return subsets[node].parent
-  
+
+
 def union(subsets, u, v):
-  
     if subsets[u].rank > subsets[v].rank:
         subsets[v].parent = u
     elif subsets[v].rank > subsets[u].rank:
         subsets[u].parent = v
-  
+
     else:
         subsets[v].parent = u
         subsets[u].rank += 1
+
 
 def _remove_duplicate_measurements(measurements, thresh):
     n = len(measurements)
 
     if n < 2:
         return measurements
-    
+
     subsets = [Subset(p, 0) for p in range(n)]
 
-    for i in range(n-1):
-        for j in range(i+1, n):
+    for i in range(n - 1):
+        for j in range(i + 1, n):
             a = measurements[i][:2]
             b = measurements[j][:2]
-            if np.linalg.norm(a-b) < thresh:
+            if np.linalg.norm(a - b) < thresh:
                 union(subsets, i, j)
 
     distinct = set(find(subsets, i) for i in range(n))
@@ -127,52 +130,22 @@ def process(data, N):
     return odom, measurements
 
 
-<<<<<<< HEAD
-# with open("aut_camera.json") as f:
-# with open("aut_combined.json") as f:
-# with open("skidpad_02.json") as f:
-# with open("td_01.json") as f:
-=======
->>>>>>> 868d167... created slam class & added script to run slam with json data
-with open("td_02.json") as f:
+with open('td_02.json') as f:
     data = json.load(f)
 
-# data = data[800:] # aut
-# data = data[1800:] # skidpad01
-# data = data[1100:] # skidpad02
-# data = data[4000:] # td01
-data = data[80:] # td02
+data = data[80:]
 N = len(data)
 odom, measurements = process(data, N)
 
-config = {
-    "SEED": 9,
-    "N": 2048, # number of particles
-    "DT": 1.0,
-    "THREADS": 512, # number threads in a block
-    "GPU_HEAP_SIZE_BYTES": 2 * 100000 * 1024, # available GPU heap size
-    "THRESHOLD": 2.1,
-    "sensor": {
-        "RANGE": 9.0,
-        "FOV": np.pi*0.85,
-        # "VARIANCE": [0.25 ** 2, np.deg2rad(1) ** 2],
-        "VARIANCE": [1.5 ** 2, np.deg2rad(5) ** 2],
-        "MAX_MEASUREMENTS": 100, # upper bound on the total number of simultaneous measurements
-        "MEASUREMENTS": measurements,
-        "MISS_PROB": 0
-    },
-    "ODOMETRY": odom,
-    "ODOMETRY_VARIANCE": [0.1 ** 2, 0.1 ** 2, np.deg2rad(0.5) ** 2],
-    # "ODOMETRY_VARIANCE": [0.2 ** 2, 0.2 ** 2, np.deg2rad(1.5) ** 2],
-    # "ODOMETRY_VARIANCE": [0.3 ** 2, 0.3 ** 2, np.deg2rad(3.5) ** 2],
-    "MAX_LANDMARKS": 1000, # upper bound on the total number of landmarks in the environment
-    "START_POSITION": odom[0].copy()
-}
+slam = Slam(start_position=odom[0].copy())
 
-config = dotify(config)
+for i in range(odom.shape[0]):
+    print(i)
+    if i == 188:
+        print("lol")
 
-config.sensor.COVARIANCE = \
-    np.diag(config.sensor.VARIANCE).astype(np.float64)
-
-config.PARTICLES_PER_THREAD = config.N // config.THREADS
-config.PARTICLE_SIZE = 6 + 8*config.MAX_LANDMARKS
+    try:
+        slam.set_odometry(odom[i])
+        slam.set_measurements(measurements[i])
+    except:
+        print("error")
