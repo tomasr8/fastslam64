@@ -55,7 +55,7 @@ def process(data, N):
     return odom, measurements
 
 
-with open("/home/tomas/Desktop/eforce/ins_funkcni/slam.json") as f:
+with open("td_02.json") as f:
     data = json.load(f)
 
 data = data[750:]
