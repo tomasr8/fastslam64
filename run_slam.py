@@ -111,7 +111,7 @@ def process(data, N):
         theta = get_heading(o)
         theta = pi_2_pi(theta)
 
-        odom.append([x, y, theta])
+        odom.append(((x,y),(o[0],o[1],o[2],o[3])))
 
         cones = np.array(data[i]["detections"])
         if cones.size > 0:
@@ -140,12 +140,7 @@ odom, measurements = process(data, N)
 slam = Slam(start_position=odom[0].copy())
 
 for i in range(odom.shape[0]):
-    print(i)
-    if i == 188:
-        print("lol")
 
-    try:
-        slam.set_odometry(odom[i])
-        slam.set_measurements(measurements[i])
-    except:
-        print("error")
+    slam.set_odometry(odom[i])
+    print(slam.set_measurements(measurements[i])[1])
+
