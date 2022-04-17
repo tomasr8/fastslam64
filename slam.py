@@ -51,9 +51,10 @@ class Slam:
         self.__cuda_predict_from_imu__()
         self.__cuda_update__()
         rescale(self.cuda_modules, config, self.memory)
+        cuda.memcpy_dtoh(self.particles, self.memory.particles)
         estimate = get_pose_estimate(self.cuda_modules, config, self.memory)
         best = np.argmax(FlatParticle.w(self.particles))
-        cuda.memcpy_dtoh(self.particles, self.memory.particles)
+        best_covariances = FlatParticle.get_covariances(self.particles, best)
         landmarks = FlatParticle.get_landmarks(self.particles, best)
         self.__cuda_get_weights__()
         cuda.memcpy_dtoh(self.weights, self.memory.weights)
@@ -119,6 +120,8 @@ class Slam:
     def __xy2rb__(self,pose, landmark):
         color = landmark[2]
         position = pose[:2]
+        #print("pose",pose)
+        #print("land",landmark)
         vector_to_landmark = np.array(landmark[:2] - position, dtype=np.float64)
 
         r = np.linalg.norm(vector_to_landmark)

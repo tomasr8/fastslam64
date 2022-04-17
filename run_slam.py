@@ -21,7 +21,7 @@ def pi_2_pi(angle):
 
 def local_to_global(cones, x, y, heading):
     """Convert cones from the car frame to the global frame"""
-
+    #print("cones",cones)
     cones = cones.copy()
 
     R = np.float32([
@@ -115,6 +115,7 @@ def process(data, N):
 
         cones = np.array(data[i]["detections"])
         if cones.size > 0:
+            #print("cones",cones)
             colors = cones[:, 3]
             colors = np.reshape(colors, (colors.shape[0], 1))
             cones = local_to_global(cones[:, :2], x, y, theta)
@@ -142,5 +143,6 @@ slam = Slam(start_position=odom[0].copy())
 for i in range(odom.shape[0]):
 
     slam.set_odometry(odom[i])
-    print(slam.set_measurements(measurements[i])[1])
+    print(len(slam.set_measurements(measurements[i])[1]))
+    
 
