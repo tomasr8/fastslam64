@@ -7,15 +7,15 @@ config = {
     "DT": 1.0,
     "THREADS": 512, # number threads in a block
     "GPU_HEAP_SIZE_BYTES": 2 * 100000 * 1024, # available GPU heap size
-    "THRESHOLD": 4.0,
+    "THRESHOLD": 2.0,
     "sensor": {
-        "RANGE": 30,
-        "FOV": np.pi,
-        "VARIANCE": [0.1 ** 2, np.deg2rad(1) ** 2],
+        "RANGE": 9.0,
+        "FOV": np.pi*0.85,
+        "VARIANCE": [1.5 ** 2, np.deg2rad(5) ** 2],
         "MAX_MEASUREMENTS": 100, # upper bound on the total number of simultaneous measurements
         "MISS_PROB": 0
     },
-    "ODOMETRY_VARIANCE": [0.2 ** 2, 0.2 ** 2, np.deg2rad(1) ** 2],
+    "ODOMETRY_VARIANCE": [0.1 ** 2, 0.1 ** 2, np.deg2rad(0.5) ** 2],
     # "LANDMARKS": np.load("accel_landmarks.npy").astype(np.float64), # landmark positions
     "MAX_LANDMARKS": 1000, # upper bound on the total number of landmarks in the environment
 }

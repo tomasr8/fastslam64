@@ -4,6 +4,7 @@ import math
 from slam import Slam
 
 
+
 def get_heading(o):
     # The heading given by the INS is encoded in the roll component
     # It also needs to be negated for some reason,
@@ -140,9 +141,12 @@ odom, measurements = process(data, N)
 
 slam = Slam(start_position=odom[0].copy())
 
+
+
+
 for i in range(odom.shape[0]):
 
     slam.set_odometry(odom[i])
-    print(len(slam.set_measurements(measurements[i])[1]))
+    est = slam.set_measurements(measurements[i])
     
 
