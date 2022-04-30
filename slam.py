@@ -1,19 +1,19 @@
 import numpy as np
 import pycuda.driver as cuda
 import math
-from config_ros import config
-from cuda.fastslam import load_cuda_modules
-from lib.common import CUDAMemory, resample, rescale, get_pose_estimate
-from lib.particle3 import FlatParticle
+from .config_ros import config
+from .cuda.fastslam import load_cuda_modules
+from .lib.common import CUDAMemory, resample, rescale, get_pose_estimate
+from .lib.particle3 import FlatParticle
 
 import matplotlib.pyplot as plt
-from lib.plotting import (
+from .lib.plotting import (
     plot_connections, plot_history, plot_landmarks, plot_measurement,
     plot_particles_weight, plot_confidence_ellipse,
     plot_sensor_fov, plot_map
 )
 
-from lib.utils import number_to_color
+from .lib.utils import number_to_color
 
 
 class Slam:
@@ -131,12 +131,21 @@ class Slam:
         best = np.argmax(FlatParticle.w(self.particles))
         landmarks = FlatParticle.get_landmarks(self.particles, best)
         covariances = FlatParticle.get_covariances(self.particles, best)
+        colors = FlatParticle.get_colors(self.particles,best)
         self.__cuda_get_weights__()
         cuda.memcpy_dtoh(self.weights, self.memory.weights)
         neff = FlatParticle.neff(self.weights)
         if neff < 0.6*config.N:
             resample(self.cuda_modules, config, self.weights, self.memory, 0.5)
-        return estimate, landmarks
+        landmarks_filtered = []
+        for i in range(0,len(covariances)):
+            pearson = covariances[i][0, 1] / np.sqrt(covariances[i][0, 0] * covariances[i][1, 1])
+            ell_radius_x = np.sqrt(1 + pearson)
+            ell_radius_y = np.sqrt(1 - pearson)
+            if np.pi*ell_radius_y*ell_radius_x<3.5:
+                landmarks_filtered.append(landmarks[i])
+        print(landmarks_filtered)
+        return estimate, landmarks_filtered,colors
     
     # odometry : ((x,y),(x,y,z,w)) (position,orientation)
     def set_odometry(self,odometry:tuple):
