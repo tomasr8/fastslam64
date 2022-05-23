@@ -30,8 +30,8 @@ class Slam:
         assert config.N % config.THREADS == 0
         self.measurements = None
         self.odometry= None
-        self.plot = plot
-        if plot:
+        self.plot_enabled = plot
+        if self.plot_enabled:
             self.fig, self.ax = plt.subplots(1, 2, figsize=(10, 5))
             self.ax[0].axis('scaled')
             self.ax[1].axis('scaled')
@@ -67,67 +67,8 @@ class Slam:
         rescale(self.cuda_modules, config, self.memory)
         cuda.memcpy_dtoh(self.particles, self.memory.particles)
         estimate = get_pose_estimate(self.cuda_modules, config, self.memory)
-        if self.plot:
-            self.ax[0].clear()
-            self.ax[1].clear()
-            self.ax[0].set_xlim([-20, 40])
-            self.ax[0].set_ylim([-70, 30])
-            self.ax[1].set_xlim([-20, 40])
-            self.ax[1].set_ylim([-70, 30])
-
-            major_x_ticks = np.arange(-20, 40, 20)
-            minor_x_ticks = np.arange(-20, 40, 2)
-            major_y_ticks = np.arange(-70, 30, 20)
-            minor_y_ticks = np.arange(-70, 30, 2)
-
-            self.ax[0].set_xticks(major_x_ticks)
-            self.ax[0].set_xticks(minor_x_ticks, minor=True)
-            self.ax[0].set_yticks(major_y_ticks)
-            self.ax[0].set_yticks(minor_y_ticks, minor=True)
-            self.ax[1].set_xticks(major_x_ticks)
-            self.ax[1].set_xticks(minor_x_ticks, minor=True)
-            self.ax[1].set_yticks(major_y_ticks)
-            self.ax[1].set_yticks(minor_y_ticks, minor=True)
-
-            self.ax[0].grid(which='minor', alpha=0.2)
-            self.ax[0].grid(which='major', alpha=0.5)
-            self.ax[1].grid(which='minor', alpha=0.2)
-            self.ax[1].grid(which='major', alpha=0.5)
-
-            plot_sensor_fov(self.ax[0], self.odometry, config.sensor.RANGE, config.sensor.FOV)
-            plot_sensor_fov(self.ax[1], self.odometry, config.sensor.RANGE, config.sensor.FOV)
-
-            visible_measurements = np.array([self.rb2xy(self.odometry, m) for m in self.measurements])
-
-            if(visible_measurements.size != 0):
-                plot_connections(self.ax[0], self.odometry, visible_measurements[:, :2] + self.odometry[:2])
-
-            # plot_landmarks(ax[0], config.LANDMARKS, color="blue", zorder=100)
-            #plot_history(ax[0], stats.ground_truth_path, color='green')
-    #        plot_history(ax[0], stats.predicted_path, color='orange')
-    #       plot_history(ax[0], config.ODOMETRY[:i], color='red')
-
-            plot_particles_weight(self.ax[0], self.particles)
-            if(visible_measurements.size != 0):
-                cone_colors = [number_to_color(n) for n in visible_measurements[:, 2]]
-                plot_measurement(self.ax[0], self.odometry[:2], visible_measurements[:, :2], color=cone_colors, zorder=103)
-
-            best = np.argmax(FlatParticle.w(self.particles))
-            # plot_landmarks(ax[1], config.LANDMARKS, color="black")
-            covariances = FlatParticle.get_covariances(self.particles, best)
-
-            plot_map(self.ax[1], FlatParticle.get_landmarks(self.particles, best),
-                        [number_to_color(n) for n in FlatParticle.get_colors(self.particles, best)], marker="o")
-
-            plot_map(self.ax[0], FlatParticle.get_landmarks(self.particles, best),
-                        [number_to_color(n) for n in FlatParticle.get_colors(self.particles, best)], size=8, marker="o", edgecolor='black')
-
-            for i, landmark in enumerate(FlatParticle.get_landmarks(self.particles, best)):
-                plot_confidence_ellipse(self.ax[1], landmark, covariances[i], n_std=3)
-
-            self.ax[0].arrow(self.odometry[0], self.odometry[1], 2.5*np.cos(self.odometry[2]), 2.5*np.sin(self.odometry[2]), color="green", width=0.2, head_width=0.5)
-
-            plt.pause(0.0001)
+        if self.plot_enabled:
+            self.plot()
         best = np.argmax(FlatParticle.w(self.particles))
         landmarks = FlatParticle.get_landmarks(self.particles, best)
         covariances = FlatParticle.get_covariances(self.particles, best)
@@ -137,15 +78,8 @@ class Slam:
         neff = FlatParticle.neff(self.weights)
         if neff < 0.6*config.N:
             resample(self.cuda_modules, config, self.weights, self.memory, 0.5)
-        landmarks_filtered = []
-        for i in range(0,len(covariances)):
-            pearson = covariances[i][0, 1] / np.sqrt(covariances[i][0, 0] * covariances[i][1, 1])
-            ell_radius_x = np.sqrt(1 + pearson)
-            ell_radius_y = np.sqrt(1 - pearson)
-            if np.pi*ell_radius_y*ell_radius_x<3.5:
-                landmarks_filtered.append(landmarks[i])
-        print(landmarks_filtered)
-        return estimate, landmarks_filtered,colors
+        
+        return estimate, landmarks,colors,covariances
     
     # odometry : ((x,y),(x,y,z,w)) (position,orientation)
     def set_odometry(self,odometry:tuple):
@@ -204,8 +138,6 @@ class Slam:
     def __xy2rb__(self,pose, landmark):
         color = landmark[2]
         position = pose[:2]
-        #print("pose",pose)
-        #print("land",landmark)
         vector_to_landmark = np.array(landmark[:2] - position, dtype=np.float64)
 
         r = np.linalg.norm(vector_to_landmark)
@@ -222,3 +154,60 @@ class Slam:
         [_, _, theta] = pose
         [r, b, color] = rb
         return [r * np.cos(b + theta), r * np.sin(b + theta), color]
+
+    def plot(self):
+        self.ax[0].clear()
+        self.ax[1].clear()
+        self.ax[0].set_xlim([-20, 40])
+        self.ax[0].set_ylim([-70, 30])
+        self.ax[1].set_xlim([-20, 40])
+        self.ax[1].set_ylim([-70, 30])
+
+        major_x_ticks = np.arange(-20, 40, 20)
+        minor_x_ticks = np.arange(-20, 40, 2)
+        major_y_ticks = np.arange(-70, 30, 20)
+        minor_y_ticks = np.arange(-70, 30, 2)
+
+        self.ax[0].set_xticks(major_x_ticks)
+        self.ax[0].set_xticks(minor_x_ticks, minor=True)
+        self.ax[0].set_yticks(major_y_ticks)
+        self.ax[0].set_yticks(minor_y_ticks, minor=True)
+        self.ax[1].set_xticks(major_x_ticks)
+        self.ax[1].set_xticks(minor_x_ticks, minor=True)
+        self.ax[1].set_yticks(major_y_ticks)
+        self.ax[1].set_yticks(minor_y_ticks, minor=True)
+
+        self.ax[0].grid(which='minor', alpha=0.2)
+        self.ax[0].grid(which='major', alpha=0.5)
+        self.ax[1].grid(which='minor', alpha=0.2)
+        self.ax[1].grid(which='major', alpha=0.5)
+
+        plot_sensor_fov(self.ax[0], self.odometry, config.sensor.RANGE, config.sensor.FOV)
+        plot_sensor_fov(self.ax[1], self.odometry, config.sensor.RANGE, config.sensor.FOV)
+
+        visible_measurements = np.array([self.rb2xy(self.odometry, m) for m in self.measurements])
+
+        if(visible_measurements.size != 0):
+            plot_connections(self.ax[0], self.odometry, visible_measurements[:, :2] + self.odometry[:2])
+
+
+        plot_particles_weight(self.ax[0], self.particles)
+        if(visible_measurements.size != 0):
+            cone_colors = [number_to_color(n) for n in visible_measurements[:, 2]]
+            plot_measurement(self.ax[0], self.odometry[:2], visible_measurements[:, :2], color=cone_colors, zorder=103)
+
+        best = np.argmax(FlatParticle.w(self.particles))
+        covariances = FlatParticle.get_covariances(self.particles, best)
+
+        plot_map(self.ax[1], FlatParticle.get_landmarks(self.particles, best),
+                    [number_to_color(n) for n in FlatParticle.get_colors(self.particles, best)], marker="o")
+
+        plot_map(self.ax[0], FlatParticle.get_landmarks(self.particles, best),
+                    [number_to_color(n) for n in FlatParticle.get_colors(self.particles, best)], size=8, marker="o", edgecolor='black')
+
+        for i, landmark in enumerate(FlatParticle.get_landmarks(self.particles, best)):
+            plot_confidence_ellipse(self.ax[1], landmark, covariances[i], n_std=3)
+
+        self.ax[0].arrow(self.odometry[0], self.odometry[1], 2.5*np.cos(self.odometry[2]), 2.5*np.sin(self.odometry[2]), color="green", width=0.2, head_width=0.5)
+
+        plt.pause(0.0001)
