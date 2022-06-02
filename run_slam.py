@@ -142,11 +142,5 @@ odom, measurements = process(data, N)
 slam = Slam(start_position=odom[0].copy())
 
 
-
-
 for i in range(odom.shape[0]):
-
-    slam.set_odometry(odom[i])
-    est = slam.set_measurements(measurements[i])
-    
-
+    slam.do_step(odom[i], measurements[i])

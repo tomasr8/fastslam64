@@ -84,23 +84,33 @@ class Slam:
         cuda.memcpy_htod(self.memory.particles, self.particles)
         self._cuda_init_rng()
 
-    def set_measurements(self,measurements):
+
+    def do_step(self, odometry, measurements):
+        theta = self.get_heading(odometry[1])
+        theta = pi_2_pi(theta)
+        self.odometry = [*odometry[:-1], theta]
+
         self.measurements = np.array([xy2rb(self.odometry, m) for m in measurements], dtype=np.float64)
 
         self._cuda_reset_weights()
-      
+
         cuda.memcpy_htod(self.memory.measurements, self.measurements)
+
         self._cuda_predict_from_imu()
         self._cuda_update()
+
         rescale(self.cuda_modules, config, self.memory)
-        cuda.memcpy_dtoh(self.particles, self.memory.particles)
         estimate = get_pose_estimate(self.cuda_modules, config, self.memory)
+
+        cuda.memcpy_dtoh(self.particles, self.memory.particles)
         if self.plot_enabled:
             self.plot()
+
         best = np.argmax(FlatParticle.w(self.particles))
         landmarks = FlatParticle.get_landmarks(self.particles, best)
         covariances = FlatParticle.get_covariances(self.particles, best)
-        colors = FlatParticle.get_colors(self.particles,best)
+        colors = FlatParticle.get_colors(self.particles, best)
+
         self._cuda_get_weights()
         cuda.memcpy_dtoh(self.weights, self.memory.weights)
         neff = FlatParticle.neff(self.weights)
@@ -108,12 +118,6 @@ class Slam:
             resample(self.cuda_modules, config, self.weights, self.memory, 0.5)
         
         return estimate, landmarks,colors,covariances
-    
-    def set_odometry(self, odometry:tuple):
-        # odometry : ((x,y),(x,y,z,w)) (position,orientation)
-        theta = self.get_heading(odometry[1])
-        theta = pi_2_pi(theta)
-        self.odometry = [odometry[0][0],odometry[0][1],theta]
 
     def get_heading(self, o):
         roll = np.arctan2(
