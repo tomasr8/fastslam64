@@ -16,9 +16,34 @@ from .lib.plotting import (
 from .lib.utils import number_to_color
 
 
+def pi_2_pi(self, angle):
+    return (angle + math.pi) % (2 * math.pi) - math.pi
+
+
+def wrap_angle(self,angle):
+    return np.arctan2(np.sin(angle), np.cos(angle))
+
+
+def xy2rb(self,pose, landmark):
+    color = landmark[2]
+    position = pose[:2]
+    vector_to_landmark = np.array(landmark[:2] - position, dtype=np.float64)
+
+    r = np.linalg.norm(vector_to_landmark)
+    b = np.arctan2(vector_to_landmark[1], vector_to_landmark[0]) - pose[2]
+    b = wrap_angle(b)
+
+    return r, b, color    
+
+
+def rb2xy(self,pose, rb):
+    [_, _, theta] = pose
+    [r, b, color] = rb
+    return [r * np.cos(b + theta), r * np.sin(b + theta), color]
+
+
 class Slam:
-    def __init__(self,seed=None,start_position= None,plot=False):
-    # seed init
+    def __init__(self, seed=None, start_position=None, plot=False):
         if seed is None:
             self.seed = config.SEED
         else:
@@ -28,8 +53,10 @@ class Slam:
         assert config.THREADS <= 1024 # cannot run more in a single block
         assert config.N >= config.THREADS
         assert config.N % config.THREADS == 0
+
         self.measurements = None
         self.odometry= None
+
         self.plot_enabled = plot
         if self.plot_enabled:
             self.fig, self.ax = plt.subplots(1, 2, figsize=(10, 5))
@@ -37,33 +64,34 @@ class Slam:
             self.ax[1].axis('scaled')
 
         theta = self.get_heading(start_position[1])
-        theta = self.pi_2_pi(theta)
-        start_position = [start_position[0][0],start_position[0][1],theta]
+        theta = pi_2_pi(theta)
+        start_position = [*start_position[:-1], theta]
 
-        #particles init
+        # Initialize particles
         self.particles = FlatParticle.get_initial_particles(config.N, config.MAX_LANDMARKS, start_position, sigma=0.2)
-
+        # Initialize particle weights
+        self.weights = np.zeros(config.N, dtype=np.float64)
+        # Compile and load cuda modules
         self.cuda_modules = load_cuda_modules(
                 THREADS=config.THREADS,
                 PARTICLE_SIZE=config.PARTICLE_SIZE,
                 N_PARTICLES=config.N
             )
-
+        # Allocate memory on the GPU
         self.memory = CUDAMemory(config)
-        self.weights = np.zeros(config.N, dtype=np.float64)
-
+        # Copy data to the GPU
         cuda.memcpy_htod(self.memory.cov, config.sensor.COVARIANCE)
         cuda.memcpy_htod(self.memory.particles, self.particles)
-        self.__cuda_init_rng__()
+        self._cuda_init_rng()
 
     def set_measurements(self,measurements):
-        self.measurements = np.array([self.__xy2rb__(self.odometry, m) for m in measurements], dtype=np.float64)
+        self.measurements = np.array([xy2rb(self.odometry, m) for m in measurements], dtype=np.float64)
 
-        self.__cuda_reset_weights__()
+        self._cuda_reset_weights()
       
         cuda.memcpy_htod(self.memory.measurements, self.measurements)
-        self.__cuda_predict_from_imu__()
-        self.__cuda_update__()
+        self._cuda_predict_from_imu()
+        self._cuda_update()
         rescale(self.cuda_modules, config, self.memory)
         cuda.memcpy_dtoh(self.particles, self.memory.particles)
         estimate = get_pose_estimate(self.cuda_modules, config, self.memory)
@@ -73,7 +101,7 @@ class Slam:
         landmarks = FlatParticle.get_landmarks(self.particles, best)
         covariances = FlatParticle.get_covariances(self.particles, best)
         colors = FlatParticle.get_colors(self.particles,best)
-        self.__cuda_get_weights__()
+        self._cuda_get_weights()
         cuda.memcpy_dtoh(self.weights, self.memory.weights)
         neff = FlatParticle.neff(self.weights)
         if neff < 0.6*config.N:
@@ -81,10 +109,10 @@ class Slam:
         
         return estimate, landmarks,colors,covariances
     
-    # odometry : ((x,y),(x,y,z,w)) (position,orientation)
-    def set_odometry(self,odometry:tuple):
+    def set_odometry(self, odometry:tuple):
+        # odometry : ((x,y),(x,y,z,w)) (position,orientation)
         theta = self.get_heading(odometry[1])
-        theta = self.pi_2_pi(theta)
+        theta = pi_2_pi(theta)
         self.odometry = [odometry[0][0],odometry[0][1],theta]
 
     def get_heading(self, o):
@@ -94,21 +122,24 @@ class Slam:
         )
         return - roll
 
-    def pi_2_pi(self, angle):
-        return (angle + math.pi) % (2 * math.pi) - math.pi
+    def _cuda_init_rng(self):
+        """Initialize GPU random generators"""
 
-    def __cuda_init_rng__(self):
         self.cuda_modules["predict"].get_function("init_rng")(
             np.int32(self.seed), block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
         )
 
-    def __cuda_reset_weights__(self):
+    def _cuda_reset_weights(self):
+        """Set all particle weights to 1/N"""
+
         self.cuda_modules["resample"].get_function("reset_weights")(
             self.memory.particles,
             block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
         )
 
-    def __cuda_predict_from_imu__(self):
+    def _cuda_predict_from_imu(self):
+        """Propagate particles forward using imu/gps data"""
+
         self.cuda_modules["predict"].get_function("predict_from_imu")(
             self.memory.particles,
             np.float64(self.odometry[0]), np.float64(self.odometry[1]), np.float64(self.odometry[2]),
@@ -116,7 +147,9 @@ class Slam:
             block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
         )
 
-    def __cuda_update__(self):
+    def _cuda_update(self):
+        """Update particle weights using measurements"""
+
         block_size = config.N if config.N < 32 else 32
         self.cuda_modules["update"].get_function("update")(
             self.memory.particles, np.int32(1),
@@ -129,31 +162,13 @@ class Slam:
             block=(block_size, 1, 1), grid=(config.N//block_size, 1, 1)
         )
     
-    def __cuda_get_weights__(self):
+    def _cuda_get_weights(self):
+        """Extract weights from the GPU"""
+
         self.cuda_modules["weights_and_mean"].get_function("get_weights")(
             self.memory.particles, self.memory.weights,
             block=(config.THREADS, 1, 1), grid=(config.N//config.THREADS, 1, 1)
         )
-
-    def __xy2rb__(self,pose, landmark):
-        color = landmark[2]
-        position = pose[:2]
-        vector_to_landmark = np.array(landmark[:2] - position, dtype=np.float64)
-
-        r = np.linalg.norm(vector_to_landmark)
-        b = np.arctan2(vector_to_landmark[1], vector_to_landmark[0]) - pose[2]
-        b = self.__wrap_angle__(b)
-
-        return r, b, color    
-
-    def __wrap_angle__(self,angle):
-        return np.arctan2(np.sin(angle), np.cos(angle))
-
-        
-    def rb2xy(self,pose, rb):
-        [_, _, theta] = pose
-        [r, b, color] = rb
-        return [r * np.cos(b + theta), r * np.sin(b + theta), color]
 
     def plot(self):
         self.ax[0].clear()
@@ -185,7 +200,7 @@ class Slam:
         plot_sensor_fov(self.ax[0], self.odometry, config.sensor.RANGE, config.sensor.FOV)
         plot_sensor_fov(self.ax[1], self.odometry, config.sensor.RANGE, config.sensor.FOV)
 
-        visible_measurements = np.array([self.rb2xy(self.odometry, m) for m in self.measurements])
+        visible_measurements = np.array([rb2xy(self.odometry, m) for m in self.measurements])
 
         if(visible_measurements.size != 0):
             plot_connections(self.ax[0], self.odometry, visible_measurements[:, :2] + self.odometry[:2])
